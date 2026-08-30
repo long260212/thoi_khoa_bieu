@@ -1,0 +1,18 @@
+{
+  "name": "edu-schedule-manager",
+  "version": "1.0.0",
+  "description": "Hệ thống Quản lý Lịch Giảng Dạy & Báo Giảng Giáo Viên",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx -y serve .",
+    "dev": "npx -y serve ."
+  },
+  "keywords": [
+    "education",
+    "schedule",
+    "teaching",
+    "lesson-plan"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduSchedule - Quản Lý Lịch Giảng Dạy & Báo Giảng Giáo Viên</title>
+    <meta name="description" content="Hệ thống quản lý lịch giảng dạy, báo giảng theo ca học sáng/chiều, theo dõi tiến độ và đính kèm tải xuống tài liệu bài giảng dành cho giáo viên.">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navbar -->
+        <header class="navbar">
+            <div class="brand-container" onclick="UI.navigateToDashboard()">
+                <div class="brand-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        <path d="M12 6v6"></path>
+                        <path d="M9 9h6"></path>
+                    </svg>
+                </div>
+                <div>
+                    <span class="brand-name">EduSchedule</span>
+                    <span class="brand-tag">Báo Giảng v2.0</span>
+                </div>
+            </div>
+
+            <div class="nav-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-export-data" title="Xuất file JSON sao lưu">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Sao lưu</span>
+                </button>
+
+                <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin-bottom: 0;" title="Khôi phục dữ liệu từ file JSON">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span>Khôi phục</span>
+                    <input type="file" id="input-import-data" accept=".json" style="display: none;">
+                </label>
+
+                <button class="btn btn-secondary btn-sm" id="btn-reset-data" title="Nạp lại dữ liệu mẫu giáo viên & bài giảng">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
+                    <span>Dữ liệu mẫu</span>
+                </button>
+
+                <button class="btn btn-secondary btn-sm" id="btn-lock-app" title="Khóa ứng dụng ngay">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <span>Khóa app</span>
+                </button>
+
+                <button class="btn-icon" id="btn-toggle-theme" title="Chuyển chế độ sáng/tối">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- ================= VIEW 1: DASHBOARD ================= -->
+            <section id="view-dashboard" class="view-section active">
+                <div class="dashboard-header">
+                    <div class="header-title-group">
+                        <h1>Quản Lý Lịch Giảng Dạy</h1>
+                        <p>Theo dõi tiến độ giảng dạy, sổ báo giảng và tài liệu của toàn bộ giáo viên</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="App.openAddTeacherModal()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Thêm giáo viên mới
+                    </button>
+                </div>
+
+                <!-- Stats Overview Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon indigo">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">Tổng số Giáo viên</div>
+                            <div class="stat-value" id="stat-total-teachers">0</div>
+                            <div class="stat-sub">Đang hoạt động trong kỳ</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon emerald">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">Buổi học đã báo giảng</div>
+                            <div style="display: flex; align-items: baseline; gap: 6px;">
+                                <span class="stat-value" id="stat-total-taught">0</span>
+                                <span style="font-size: 0.85rem; color: var(--text-muted);" id="stat-total-required">/ 0 buổi</span>
+                            </div>
+                            <div class="stat-sub">Tổng số buổi trên hệ thống</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon amber">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">Tỷ lệ Hoàn thành TB</div>
+                            <div class="stat-value" id="stat-completion-rate">0%</div>
+                            <div class="stat-sub">So với chỉ tiêu quy định</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon sky">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">Tài liệu đã đính kèm</div>
+                            <div class="stat-value" id="stat-total-files">0</div>
+                            <div class="stat-sub">Giáo án, đề cương & slide</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search & Filters Bar -->
+                <div class="control-bar">
+                    <div class="search-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input type="text" id="search-teachers-input" placeholder="Tìm kiếm theo tên giáo viên, bộ môn, email...">
+                    </div>
+
+                    <div class="filter-group">
+                        <div class="view-mode-toggle">
+                            <button class="view-btn active" id="btn-view-grid" title="Xem dạng lưới thẻ">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                                <span>Thẻ</span>
+                            </button>
+                            <button class="view-btn" id="btn-view-table" title="Xem dạng bảng danh sách">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                                <span>Bảng</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teachers Container -->
+                <div id="teachers-display-container" class="teacher-grid">
+                    <!-- Dynamic Content -->
+                </div>
+            </section>
+
+
+            <!-- ================= VIEW 2: TEACHER DETAIL ================= -->
+            <section id="view-teacher-detail" class="view-section">
+                <!-- Breadcrumb -->
+                <div class="breadcrumb">
+                    <a href="javascript:void(0)" onclick="UI.navigateToDashboard()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline; vertical-align:-2px;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        Dashboard
+                    </a>
+                    <span>/</span>
+                    <span id="breadcrumb-teacher-name" style="color: var(--text-main); font-weight: 600;">Chi tiết giáo viên</span>
+                </div>
+
+                <!-- Profile Banner -->
+                <div class="teacher-detail-header">
+                    <div class="profile-main-wrap">
+                        <div class="profile-info">
+                            <div class="profile-avatar" id="teacher-detail-avatar">GV</div>
+                            <div class="profile-details">
+                                <h2 id="teacher-detail-name">Tên Giáo Viên</h2>
+                                <div class="profile-meta-tags">
+                                    <span class="meta-tag" id="teacher-detail-subject">Môn học</span>
+                                    <span class="meta-tag">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                                        <span id="teacher-detail-email">email@eduschedule.vn</span>
+                                    </span>
+                                    <span class="meta-tag">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                        <span id="teacher-detail-phone">0912 345 678</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Box -->
+                        <div class="profile-progress-box">
+                            <div class="progress-labels">
+                                <span>Tiến độ giảng dạy:</span>
+                                <strong id="profile-taught-count" style="color: var(--primary);">0 / 30 buổi</strong>
+                            </div>
+                            <div class="progress-bar-bg" style="margin: 8px 0;">
+                                <div class="progress-bar-fill" id="profile-progress-bar" style="width: 0%;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
+                                <span>Chỉ tiêu kỳ này</span>
+                                <span id="profile-percent-text" style="font-weight: 700; color: var(--text-main);">0% hoàn thành</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lessons Controls & Filter Bar -->
+                <div class="control-bar">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-weight: 700; font-size: 0.9rem; margin-right: 4px;">Lọc theo Ca học:</span>
+                        <button class="btn btn-sm btn-secondary shift-filter-btn active" data-shift="all">Tất cả</button>
+                        <button class="btn btn-sm btn-secondary shift-filter-btn" data-shift="Sáng">☀️ Ca Sáng</button>
+                        <button class="btn btn-sm btn-secondary shift-filter-btn" data-shift="Chiều">🌙 Ca Chiều</button>
+                        <span class="meta-tag" id="filter-lesson-count-badge" style="font-weight: 700; background: var(--primary-light); color: var(--primary);">0 buổi</span>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <div class="search-box" style="min-width: 220px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <input type="text" id="search-lessons-input" placeholder="Tìm nội dung, lớp học...">
+                        </div>
+
+                        <button class="btn btn-secondary" onclick="UI.showPrintableReport()" title="Xem và in báo giảng chính thức">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                            <span>In Sổ Báo Giảng</span>
+                        </button>
+
+                        <button class="btn btn-primary" onclick="App.openAddLessonModal()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Thêm buổi học mới
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lessons Timeline List -->
+                <div id="lessons-list-container" class="lesson-list-container">
+                    <!-- Dynamic Lesson Cards -->
+                </div>
+            </section>
+        </main>
+
+        <!-- ================= MODALS ================= -->
+
+        <!-- 1. Modal Thêm / Chỉnh Sửa Giáo Viên -->
+        <div class="modal-backdrop" id="modal-teacher">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="modal-teacher-title">Thêm Giáo Viên Mới</h3>
+                    <button class="btn-icon" onclick="App.closeModal('modal-teacher')" title="Đóng">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <form id="form-teacher">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label" for="teacher-name">Tên giáo viên <span class="required">*</span></label>
+                            <input type="text" id="teacher-name" placeholder="Ví dụ: Thầy Nguyễn Văn A, Cô Lê Thị B..." required>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="teacher-subject">Tổ chuyên môn / Bộ môn</label>
+                                <input type="text" id="teacher-subject" placeholder="Toán, Ngữ văn, Tiếng Anh...">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="teacher-total-lessons">Tổng số buổi học quy định <span class="required">*</span></label>
+                                <input type="number" id="teacher-total-lessons" min="1" max="500" value="35" required>
+                                <span class="form-hint">Chỉ tiêu tổng số tiết/buổi dạy trong kỳ</span>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="teacher-email">Địa chỉ Email</label>
+                                <input type="email" id="teacher-email" placeholder="giao-vien@truong.edu.vn">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="teacher-phone">Số điện thoại</label>
+                                <input type="tel" id="teacher-phone" placeholder="0912 345 678">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="teacher-notes">Ghi chú chuyên môn</label>
+                            <textarea id="teacher-notes" rows="2" placeholder="Nhiệm vụ kiêm nhiệm, chủ nhiệm lớp..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-teacher')">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-primary">Lưu giáo viên</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 2. Modal Thêm / Chỉnh Sửa Buổi Học -->
+        <div class="modal-backdrop" id="modal-lesson">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="modal-lesson-title">Thêm Buổi Học Mới</h3>
+                    <button class="btn-icon" onclick="App.closeModal('modal-lesson')" title="Đóng">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <form id="form-lesson">
+                    <div class="modal-body">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="lesson-datetime">Thời gian cụ thể (Ngày & Giờ) <span class="required">*</span></label>
+                                <input type="datetime-local" id="lesson-datetime" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="lesson-shift">Ca học <span class="required">*</span></label>
+                                <select id="lesson-shift" required>
+                                    <option value="Sáng">☀️ Ca Sáng (Tiết 1 - 5)</option>
+                                    <option value="Chiều">🌙 Ca Chiều (Tiết 6 - 10)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="lesson-class">Lớp học / Phòng giảng dạy</label>
+                                <input type="text" id="lesson-class" placeholder="VD: Lớp 12A1, Phòng Lab 2...">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="lesson-topic">Tên bài dạy / Chuyên đề <span class="required">*</span></label>
+                                <input type="text" id="lesson-topic" placeholder="VD: Khảo sát hàm số bậc ba..." required>
+                            </div>
+                        </div>
+
+                        <!-- Rich Text Lesson Content -->
+                        <div class="form-group">
+                            <label class="form-label" for="lesson-content">Nội dung buổi học</label>
+                            <div class="rich-toolbar">
+                                <button type="button" class="toolbar-btn" data-action="bold" title="In đậm">B</button>
+                                <button type="button" class="toolbar-btn" data-action="italic" title="In nghiêng"><em>I</em></button>
+                                <button type="button" class="toolbar-btn" data-action="h3" title="Tiêu đề mục">H3</button>
+                                <button type="button" class="toolbar-btn" data-action="ul" title="Danh sách chấm">• Danh sách</button>
+                                <button type="button" class="toolbar-btn" data-action="ol" title="Danh sách số">1. Số thứ tự</button>
+                            </div>
+                            <textarea id="lesson-content" class="editor-textarea" placeholder="Nhập tóm tắt kiến thức, phương pháp giảng dạy, bài tập dặn dò..."></textarea>
+                        </div>
+
+                        <!-- Attachment Drag & Drop Area -->
+                        <div class="form-group">
+                            <label class="form-label">Tài liệu đính kèm (File upload)</label>
+                            <div class="file-drop-zone" id="lesson-file-dropzone">
+                                <div class="file-drop-icon">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                </div>
+                                <div class="file-drop-text">Kéo thả file vào đây hoặc click để chọn tệp</div>
+                                <div class="file-drop-hint">Hỗ trợ PDF, Word, PowerPoint, Excel, Hình ảnh (Tối đa 50MB)</div>
+                                <input type="file" id="lesson-file-input" class="file-hidden-input" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg,.zip,.rar">
+                            </div>
+                            <div id="selected-file-preview-area" style="display: none;"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-lesson')">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-primary">Lưu buổi học</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 3. Modal Xác Nhận Xóa -->
+        <div class="modal-backdrop" id="modal-confirm-delete">
+            <div class="modal-card" style="max-width: 440px;">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="confirm-modal-title" style="color: var(--danger);">Xác nhận thao tác</h3>
+                    <button class="btn-icon" onclick="App.closeModal('modal-confirm-delete')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirm-modal-message" style="font-size: 0.95rem; line-height: 1.6;"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-confirm-delete')">Hủy bỏ</button>
+                    <button type="button" class="btn btn-danger" onclick="App.executeDelete()">Xóa vĩnh viễn</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Modal In Sổ Báo Giảng -->
+        <div class="modal-backdrop" id="modal-print-report">
+            <div class="modal-card" style="max-width: 900px;" id="print-modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Xem Trước Sổ Báo Giảng</h3>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-primary btn-sm" onclick="window.print()">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                            In trang này (A4)
+                        </button>
+                        <button class="btn-icon" onclick="App.closeModal('modal-print-report')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body" id="print-modal-body" style="padding: 0; background: #fff;">
+                    <!-- Printable form -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications Container -->
+        <div class="toast-container" id="toast-container"></div>
+    </div>
+
+    <!-- ================= FULLSCREEN PASSCODE PROTECTION SCREEN ================= -->
+    <div id="app-lock-screen" class="lock-screen-overlay active">
+        <div class="lock-card" id="lock-card">
+            <div class="lock-badge" id="lock-badge">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            </div>
+            
+            <div class="lock-header">
+                <h2 class="lock-title">EduSchedule</h2>
+                <p class="lock-subtitle">Hệ thống Quản lý Báo giảng Giáo viên</p>
+                <div class="lock-notice">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    Vui lòng nhập mật mã bảo vệ để truy cập
+                </div>
+            </div>
+
+            <!-- Passcode Input Form -->
+            <form id="form-passcode" class="passcode-form" onsubmit="return false;">
+                <div class="passcode-input-wrapper">
+                    <input 
+                        type="password" 
+                        id="input-passcode" 
+                        class="passcode-input" 
+                        maxlength="16" 
+                        placeholder="••••••••" 
+                        autocomplete="current-password"
+                        inputmode="numeric"
+                        autofocus
+                    >
+                    <button type="button" class="btn-toggle-pin-view" id="btn-toggle-pin-view" title="Ẩn/Hiện mật mã">
+                        <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                    </button>
+                </div>
+
+                <!-- 8-Digit Indicator Dots -->
+                <div class="passcode-dots" id="passcode-dots">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+
+                <div id="lock-error-msg" class="lock-error-message"></div>
+
+                <!-- On-Screen Numeric Keypad -->
+                <div class="numeric-keypad">
+                    <button type="button" class="key-btn" data-key="1">1</button>
+                    <button type="button" class="key-btn" data-key="2">2</button>
+                    <button type="button" class="key-btn" data-key="3">3</button>
+                    <button type="button" class="key-btn" data-key="4">4</button>
+                    <button type="button" class="key-btn" data-key="5">5</button>
+                    <button type="button" class="key-btn" data-key="6">6</button>
+                    <button type="button" class="key-btn" data-key="7">7</button>
+                    <button type="button" class="key-btn" data-key="8">8</button>
+                    <button type="button" class="key-btn" data-key="9">9</button>
+                    <button type="button" class="key-btn key-clear" id="btn-key-clear" title="Xóa 1 số">⌫</button>
+                    <button type="button" class="key-btn" data-key="0">0</button>
+                    <button type="button" class="key-btn key-reset" id="btn-key-reset" title="Xóa hết">C</button>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-unlock" id="btn-unlock-app">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+                    <span>Mở Khóa Truy Cập</span>
+                </button>
+            </form>
+
+            <div class="lock-footer">
+                <span>🔒 Dữ liệu được bảo mật an toàn nội bộ</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/db.js"></script>
+    <script src="js/mock-data.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
