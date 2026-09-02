@@ -3,6 +3,9 @@ import { ParsedTeachingUnit } from './assignmentParser';
 // 5 ngày trong tuần (Thứ Hai đến Thứ Sáu - KHÔNG HỌC THỨ BẢY THEO QUY ĐỊNH)
 export const DAYS_LIST = ['THU_2', 'THU_3', 'THU_4', 'THU_5', 'THU_6'];
 
+// Các ngày CHỈ CÓ BUỔI CHIỀU: Thứ Hai, Thứ Ba, Thứ Tư (Thứ Năm & Thứ Sáu chiều nghỉ hoàn toàn)
+export const AFTERNOON_DAYS = ['THU_2', 'THU_3', 'THU_4'];
+
 // Buổi Sáng: Tiết 1, 2, 3, 4, 5 | Buổi Chiều: Tiết 6, 7 (tương ứng Chiều Tiết 1, Tiết 2)
 export const PERIODS_LIST = [1, 2, 3, 4, 5, 6, 7];
 
@@ -227,8 +230,14 @@ export function autoScheduleAllClasses(
         return; // Đã quá số tiết tối đa cho phép của môn trong ngày
       }
 
-      // Các vị trí bắt đầu hợp lệ (Không vắt qua giờ nghỉ trưa giữa Tiết 5 Sáng và Tiết 1 Chiều)
-      const validStartPeriods = blockSize === 2 ? [1, 2, 3, 4, 6] : [1, 2, 3, 4, 5, 6, 7];
+      // Các vị trí bắt đầu hợp lệ (CHỈ CÓ BUỔI CHIỀU VÀO THỨ 2, 3, 4; THỨ 5 & 6 NGHỈ CHIỀU)
+      const hasAfternoon = AFTERNOON_DAYS.includes(day);
+      let validStartPeriods: number[];
+      if (blockSize === 2) {
+        validStartPeriods = hasAfternoon ? [1, 2, 3, 4, 6] : [1, 2, 3, 4];
+      } else {
+        validStartPeriods = hasAfternoon ? [1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5];
+      }
 
       for (const p of validStartPeriods) {
         let isFree = true;
@@ -300,7 +309,11 @@ export function autoScheduleAllClasses(
       for (const day of daysPool) {
         if (placed) break;
 
-        for (const p of [1, 2, 3, 4, 5, 6, 7]) {
+        const availablePeriods = AFTERNOON_DAYS.includes(day)
+          ? [1, 2, 3, 4, 5, 6, 7]
+          : [1, 2, 3, 4, 5];
+
+        for (const p of availablePeriods) {
           const slotKey = getSlotKey(day, p);
           const schedKey = getScheduleKey(className, day, p);
 

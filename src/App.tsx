@@ -25,7 +25,7 @@ import {
 import * as XLSX from 'xlsx';
 import { PHAN_BOI_CHAU_DATA, PhanBoiChauTeacherData } from './utils/phanBoiChauData';
 import { getPhanBoiChauAssignments, parseTeachingExpression, ParsedTeachingUnit, SUBJECT_NAME_MAP } from './utils/assignmentParser';
-import { autoScheduleAllClasses, ScheduleResultEntry } from './utils/schedulerEngine';
+import { autoScheduleAllClasses, ScheduleResultEntry, AFTERNOON_DAYS } from './utils/schedulerEngine';
 import { MultiSourceImportModal } from './components/ImportCenter/MultiSourceImportModal';
 import { downloadSampleExcelTemplate } from './utils/multiSourceImporter';
 
@@ -71,6 +71,14 @@ const ALL_PERIOD_ITEMS = [
   { p: 6, session: 'CHIỀU', label: 'Chiều T1', display: 'Chiều Tiết 1' },
   { p: 7, session: 'CHIỀU', label: 'Chiều T2', display: 'Chiều Tiết 2' },
 ];
+
+// Các tiết học theo từng ngày: Chỉ Thứ 2, 3, 4 có học Buổi Chiều; Thứ 5 & Thứ 6 chiều nghỉ hoàn toàn
+const getPeriodsForDay = (dayKey: string) => {
+  if (AFTERNOON_DAYS.includes(dayKey)) {
+    return ALL_PERIOD_ITEMS;
+  }
+  return ALL_PERIOD_ITEMS.filter((item) => item.session === 'SÁNG');
+};
 
 export const App: React.FC = () => {
   // Chế độ xem:
@@ -124,7 +132,7 @@ export const App: React.FC = () => {
     return map;
   }, [scheduleData]);
 
-  // Tham chiếu và state cho chức năng Kéo chuột cuộn 2 chiều (Mouse 2D Drag-to-Scroll)
+  // Tham chiếu và state cho chức năng Kéo chuột cuộn 2 chiều trên toàn bộ màn hình (Global window-level Drag-to-Scroll)
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -132,8 +140,36 @@ export const App: React.FC = () => {
   const [scrollLeftState, setScrollLeftState] = useState(0);
   const [scrollTopState, setScrollTopState] = useState(0);
 
+  // Lắng nghe sự kiện chuột toàn cục (window) giúp người dùng giữ chuột kéo ở bất kỳ ô nào, kéo ra cả màn hình vẫn cuộn mượt mà
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!tableContainerRef.current) return;
+      e.preventDefault();
+      const x = e.pageX - tableContainerRef.current.offsetLeft;
+      const y = e.pageY - tableContainerRef.current.offsetTop;
+      const walkX = (x - startX) * 1.5;
+      const walkY = (y - startY) * 1.5;
+      tableContainerRef.current.scrollLeft = scrollLeftState - walkX;
+      tableContainerRef.current.scrollTop = scrollTopState - walkY;
+    };
+
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleGlobalMouseMove, { passive: false });
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isDragging, startX, startY, scrollLeftState, scrollTopState]);
+
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!tableContainerRef.current) return;
+    if (e.button !== 0 || !tableContainerRef.current) return; // Chỉ nhận chuột trái
     setIsDragging(true);
     setStartX(e.pageX - tableContainerRef.current.offsetLeft);
     setStartY(e.pageY - tableContainerRef.current.offsetTop);
@@ -141,30 +177,26 @@ export const App: React.FC = () => {
     setScrollTopState(tableContainerRef.current.scrollTop);
   };
 
-  const handleMouseLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !tableContainerRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - tableContainerRef.current.offsetLeft;
-    const y = e.pageY - tableContainerRef.current.offsetTop;
-    const walkX = (x - startX) * 1.8;
-    const walkY = (y - startY) * 1.8;
-    tableContainerRef.current.scrollLeft = scrollLeftState - walkX;
-    tableContainerRef.current.scrollTop = scrollTopState - walkY;
-  };
-
-  // Cuộn dọc trực tiếp đến Thứ được chọn (Đặc biệt là Thứ 7)
+  // Cuộn dọc trực tiếp đến Thứ được chọn
   const scrollToDayVertical = (dayKey: string) => {
     const el = document.getElementById(`day_row_${dayKey}`);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const scrollToTopTable = () => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const scrollToBottomTable = () => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTo({
+        top: tableContainerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
     }
   };
 
@@ -294,9 +326,9 @@ export const App: React.FC = () => {
     const headerRow = ['Thứ', 'Tiết', ...classList.map(c => `Lớp ${c}`)];
     masterRows.push(headerRow);
 
-    // Từng dòng: Thứ 2 đến Thứ 6 (Sáng Tiết 1-5, Chiều Tiết 1-2)
+    // Từng dòng: Thứ 2 đến Thứ 4 (Sáng + Chiều); Thứ 5 & 6 (Chỉ Sáng)
     DAYS.forEach((d) => {
-      ALL_PERIOD_ITEMS.forEach((item) => {
+      getPeriodsForDay(d.key).forEach((item) => {
         const row = [d.label, item.display];
         classList.forEach((cls) => {
           const entry = scheduleData[`${cls}_${d.key}_${item.p}`];
@@ -695,6 +727,34 @@ export const App: React.FC = () => {
                     </button>
                   </div>
 
+                  {/* Thanh điều hướng cuộn nhanh trên toàn màn hình */}
+                  <div className="flex items-center gap-1.5 bg-slate-950/80 px-2 py-1 rounded-xl border border-slate-700">
+                    <span className="text-[11px] font-bold text-slate-400 mr-1">Cuộn nhanh:</span>
+                    <button
+                      onClick={scrollToTopTable}
+                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg transition-all flex items-center gap-1"
+                      title="Cuộn lên đầu bảng"
+                    >
+                      🔼 Đầu Bảng
+                    </button>
+                    {DAYS.map((d) => (
+                      <button
+                        key={d.key}
+                        onClick={() => scrollToDayVertical(d.key)}
+                        className="px-2 py-1 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white text-xs font-bold rounded-lg transition-all"
+                      >
+                        {d.short}
+                      </button>
+                    ))}
+                    <button
+                      onClick={scrollToBottomTable}
+                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg transition-all flex items-center gap-1"
+                      title="Cuộn xuống cuối bảng"
+                    >
+                      🔽 Dưới Cùng
+                    </button>
+                  </div>
+
                   {/* Nút tải File Excel chuẩn */}
                   <button
                     onClick={handleExportExcel}
@@ -710,19 +770,16 @@ export const App: React.FC = () => {
               <div 
                 ref={tableContainerRef}
                 onMouseDown={handleMouseDown}
-                onMouseLeave={handleMouseLeave}
-                onMouseUp={handleMouseUp}
-                onMouseMove={handleMouseMove}
-                className={`overflow-auto rounded-xl border-2 select-none max-h-[82vh] transition-all ${
+                className={`overflow-auto rounded-xl border-2 select-none max-h-[82vh] transition-colors ${
                   tableTheme === 'EXCEL_LIGHT'
                     ? 'bg-white text-slate-900 border-slate-300 shadow-xl'
                     : tableTheme === 'EXCEL_DARK'
                     ? 'bg-slate-950 text-slate-200 border-slate-700 shadow-xl'
                     : 'bg-slate-900 text-slate-100 border-slate-800 shadow-2xl'
                 } ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-                title="Cuộn chuột hoặc click giữ chuột để kéo ngang/dọc xem toàn bộ 32 lớp và từ Thứ 2 đến Thứ 7"
+                title="Giữ chuột trái ở bất kỳ ô nào rồi kéo chuột trên toàn màn hình để cuộn bảng nhanh"
               >
-                <table className={`w-full text-left border-collapse ${tableTheme === 'EXCEL_LIGHT' ? 'text-slate-900' : 'text-slate-200'} text-[12px] font-sans`}>
+                <table className={`w-full text-left border-collapse select-none ${tableTheme === 'EXCEL_LIGHT' ? 'text-slate-900' : 'text-slate-200'} text-[12px] font-sans`}>
                   {/* HÀNG TIÊU ĐỀ: Thứ | Tiết | Lớp 6A1 | Lớp 6A2 ... */}
                   <thead className={`sticky top-0 z-30 font-bold border-b-2 shadow-sm ${
                     tableTheme === 'EXCEL_LIGHT'
@@ -742,7 +799,7 @@ export const App: React.FC = () => {
                       <th className={`p-2.5 uppercase w-20 min-w-[75px] text-center sticky left-[90px] z-40 border-r-2 border-b ${
                         tableTheme === 'EXCEL_LIGHT'
                           ? 'bg-[#f1f5f9] text-slate-800 border-slate-300 border-r-emerald-600'
-                          : 'bg-slate-900 text-white border-slate-700 border-r-emerald-500'
+                          : 'bg-slate-950 text-white border-slate-700 border-r-emerald-500'
                       }`}>
                         Tiết
                       </th>
@@ -762,11 +819,11 @@ export const App: React.FC = () => {
                     </tr>
                   </thead>
 
-                  {/* THÂN BẢNG: Mỗi dòng chứa Thứ, Tiết và Phân công của từng lớp (5 ngày, sáng 5 tiết + chiều 2 tiết) */}
+                  {/* THÂN BẢNG: Thứ 2, 3, 4 (Sáng + Chiều); Thứ 5 & 6 (Chỉ học Sáng, không có Chiều) */}
                   <tbody>
                     {DAYS.map((d) => (
                       <React.Fragment key={d.key}>
-                        {ALL_PERIOD_ITEMS.map((item) => (
+                        {getPeriodsForDay(d.key).map((item) => (
                           <tr 
                             key={`${d.key}_${item.p}`} 
                             id={item.p === 1 ? `day_row_${d.key}` : undefined}
@@ -948,7 +1005,9 @@ export const App: React.FC = () => {
 
                               return (
                                 <td key={d.key} className="p-2 border-l border-slate-800 print:border-black min-w-[130px] h-16 align-middle relative">
-                                  {cell && cell.subject ? (
+                                  {s.sessionKey === 'CHIEU' && !AFTERNOON_DAYS.includes(d.key) ? (
+                                    <span className="text-slate-600 print:text-slate-400 text-[11px] italic font-medium">Nghỉ chiều</span>
+                                  ) : cell && cell.subject ? (
                                     <div
                                       className="h-full rounded-xl p-2 flex flex-col justify-center items-center text-white print:text-black shadow-sm"
                                       style={{
@@ -1033,7 +1092,9 @@ export const App: React.FC = () => {
                             const entry = scheduleData[`${cls}_${d.key}_${item.p}`];
                             return (
                               <td key={d.key} className="p-1 border-l border-slate-800 print:border-black">
-                                {entry ? (
+                                {item.session === 'CHIỀU' && !AFTERNOON_DAYS.includes(d.key) ? (
+                                  <span className="text-slate-600 print:text-slate-400 text-[10px] italic">Nghỉ chiều</span>
+                                ) : entry ? (
                                   <div className="text-center">
                                     <strong className="block font-bold text-xs text-brand-300 print:text-black">{entry.subject}</strong>
                                     <span className="text-[10px] text-slate-400 print:text-gray-700">({entry.teacher})</span>
@@ -1258,7 +1319,9 @@ export const App: React.FC = () => {
 
                                 return (
                                   <td key={d.key} className="p-2 border-l border-slate-800 print:border-black min-w-[130px] align-middle">
-                                    {schedItem ? (
+                                    {s.sessionKey === 'CHIEU' && !AFTERNOON_DAYS.includes(d.key) ? (
+                                      <span className="text-slate-600 print:text-slate-400 text-[11px] italic font-medium">Nghỉ chiều</span>
+                                    ) : schedItem ? (
                                       <div
                                         className="w-full h-full rounded-xl p-2 text-white print:text-black flex flex-col justify-center items-center shadow-md transition-all hover:scale-105"
                                         style={{
@@ -1408,7 +1471,9 @@ export const App: React.FC = () => {
                               const schedItem = tSched[`${d.key}_${item.p}`];
                               return (
                                 <td key={d.key} className="p-1 border-l border-slate-800 print:border-black">
-                                  {schedItem ? (
+                                  {item.session === 'CHIỀU' && !AFTERNOON_DAYS.includes(d.key) ? (
+                                    <span className="text-slate-600 print:text-slate-400 text-[10px] italic">Nghỉ chiều</span>
+                                  ) : schedItem ? (
                                     <div className="text-center">
                                       <strong className="block font-bold text-xs text-indigo-300 print:text-black">{schedItem.subject}</strong>
                                       <span className="text-[11px] text-slate-300 print:text-gray-700 font-bold">Lớp {schedItem.className}</span>
