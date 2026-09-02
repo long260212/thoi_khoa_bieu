@@ -69,17 +69,21 @@ export const App: React.FC = () => {
   const [isScheduled, setIsScheduled] = useState(false);
   const [schedulingStats, setSchedulingStats] = useState<{ total: number; time: number } | null>(null);
 
-  // Tham chiếu và state cho chức năng Kéo chuột cuộn ngang (Mouse Drag-to-Scroll)
+  // Tham chiếu và state cho chức năng Kéo chuột cuộn 2 chiều (Mouse 2D Drag-to-Scroll)
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
+  const [startY, setStartY] = useState(0);
   const [scrollLeftState, setScrollLeftState] = useState(0);
+  const [scrollTopState, setScrollTopState] = useState(0);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!tableContainerRef.current) return;
     setIsDragging(true);
     setStartX(e.pageX - tableContainerRef.current.offsetLeft);
+    setStartY(e.pageY - tableContainerRef.current.offsetTop);
     setScrollLeftState(tableContainerRef.current.scrollLeft);
+    setScrollTopState(tableContainerRef.current.scrollTop);
   };
 
   const handleMouseLeave = () => {
@@ -94,19 +98,19 @@ export const App: React.FC = () => {
     if (!isDragging || !tableContainerRef.current) return;
     e.preventDefault();
     const x = e.pageX - tableContainerRef.current.offsetLeft;
-    const walk = (x - startX) * 1.8; // Hệ số cuộn nhanh mượt
-    tableContainerRef.current.scrollLeft = scrollLeftState - walk;
+    const y = e.pageY - tableContainerRef.current.offsetTop;
+    const walkX = (x - startX) * 1.8;
+    const walkY = (y - startY) * 1.8;
+    tableContainerRef.current.scrollLeft = scrollLeftState - walkX;
+    tableContainerRef.current.scrollTop = scrollTopState - walkY;
   };
 
-  // Chuyển nhanh đến ngày cụ thể
-  const scrollToDay = (dayIndex: number) => {
-    if (!tableContainerRef.current) return;
-    // Mỗi ngày gồm 5 cột tiết x ~75px + padding = ~380px
-    const offset = dayIndex * 380;
-    tableContainerRef.current.scrollTo({
-      left: offset,
-      behavior: 'smooth',
-    });
+  // Cuộn dọc trực tiếp đến Thứ được chọn (Đặc biệt là Thứ 7)
+  const scrollToDayVertical = (dayKey: string) => {
+    const el = document.getElementById(`day_row_${dayKey}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   };
 
   const scrollStep = (direction: 'LEFT' | 'RIGHT') => {
@@ -476,25 +480,18 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* THANH ĐIỀU HƯỚNG LỚP HỌC VÀ KHỐI LỚP (CỘT DỌC THỨ/TIẾT & KÉO CHUỘT NGANG QUA CÁC LỚP) */}
-              <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800/80 flex flex-wrap items-center justify-between gap-3 no-print">
+              {/* THANH ĐIỀU HƯỚNG: LỌC KHỐI LỚP & NHẢY NHANH ĐẾN THỨ (ĐẶC BIỆT THỨ 7) */}
+              <div className="bg-slate-950/90 p-3 rounded-2xl border border-slate-800/80 flex flex-wrap items-center justify-between gap-3 no-print">
+                {/* 1. Lọc theo Khối lớp */}
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                    <MoveHorizontal className="w-4 h-4 text-brand-400" />
-                    <span>Lướt Xem Các Lớp:</span>
+                    <Filter className="w-4 h-4 text-brand-400" />
+                    <span>Xem Khối Lớp:</span>
                   </span>
 
                   <button
-                    onClick={() => scrollStep('LEFT')}
-                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-700 transition-all"
-                    title="Cuộn sang trái"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-
-                  <button
                     onClick={() => setSelectedGradeFilter('ALL')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                       selectedGradeFilter === 'ALL'
                         ? 'bg-brand-600 text-white shadow-md'
                         : 'bg-slate-800 text-slate-300 hover:text-white'
@@ -507,7 +504,7 @@ export const App: React.FC = () => {
                     <button
                       key={grade}
                       onClick={() => setSelectedGradeFilter(grade as any)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                         selectedGradeFilter === grade
                           ? 'bg-indigo-600 text-white shadow-md'
                           : 'bg-slate-800 text-slate-300 hover:text-white'
@@ -516,33 +513,42 @@ export const App: React.FC = () => {
                       Khối {grade} ({classList.filter(c => c.startsWith(grade)).length} Lớp)
                     </button>
                   ))}
-
-                  <button
-                    onClick={() => scrollStep('RIGHT')}
-                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-700 transition-all"
-                    title="Cuộn sang phải"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-amber-400 bg-amber-950/40 px-3 py-1 rounded-xl border border-amber-800/50">
-                  <MoveHorizontal className="w-3.5 h-3.5" />
-                  <span>Cột dọc: <strong>Thứ & Tiết</strong> • Hàng ngang: <strong>Các Lớp Học</strong> (Click giữ chuột kéo ngang để xem 32 lớp)</span>
+                {/* 2. Nhảy nhanh đến từng Ngày (Thứ 2 đến Thứ 7) */}
+                <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-xl border border-slate-700">
+                  <span className="text-xs font-bold text-brand-400 pl-1.5 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Nhảy Đến Ngày:</span>
+                  </span>
+
+                  {DAYS.map((d) => (
+                    <button
+                      key={d.key}
+                      onClick={() => scrollToDayVertical(d.key)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                        d.key === 'THU_7'
+                          ? 'bg-amber-600 text-white hover:bg-amber-500 shadow-md font-black animate-pulse'
+                          : 'bg-slate-800 text-slate-300 hover:bg-brand-600 hover:text-white'
+                      }`}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* BẢNG THỜI KHÓA BIỂU: THỨ & TIẾT THEO CỘT DỌC, CÁC LỚP THEO HÀNG NGANG */}
+              {/* BẢNG THỜI KHÓA BIỂU TOÀN TRƯỜNG (CHO PHÉP CUỘN CẢ 2 CHIỀU ĐỂ XEM ĐẦY ĐỦ TỪ THỨ 2 ĐẾN THỨ 7) */}
               <div 
                 ref={tableContainerRef}
                 onMouseDown={handleMouseDown}
                 onMouseLeave={handleMouseLeave}
                 onMouseUp={handleMouseUp}
                 onMouseMove={handleMouseMove}
-                className={`overflow-x-auto rounded-2xl border-2 border-slate-800 print:border-2 print:border-black max-h-[75vh] select-none ${
+                className={`overflow-auto rounded-2xl border-2 border-slate-800 print:border-2 print:border-black max-h-[82vh] select-none ${
                   isDragging ? 'cursor-grabbing' : 'cursor-grab'
                 }`}
-                title="Click và giữ chuột để kéo ngang bảng qua các lớp học"
+                title="Cuộn chuột hoặc click giữ chuột để kéo ngang/dọc xem toàn bộ 32 lớp và từ Thứ 2 đến Thứ 7"
               >
                 <table className="w-full text-center border-collapse text-xs print:text-black">
                   <thead className="sticky top-0 z-30 bg-slate-950 print:bg-slate-100 border-b-2 border-slate-800 print:border-b-2 print:border-black shadow-md">
@@ -575,15 +581,25 @@ export const App: React.FC = () => {
                     {DAYS.map((d) => (
                       <React.Fragment key={d.key}>
                         {[1, 2, 3, 4, 5].map((period, pIdx) => (
-                          <tr key={`${d.key}_${period}`} className="hover:bg-slate-800/40 transition-colors h-14">
+                          <tr 
+                            key={`${d.key}_${period}`} 
+                            id={pIdx === 0 ? `day_row_${d.key}` : undefined}
+                            className={`hover:bg-slate-800/40 transition-colors h-14 ${
+                              d.key === 'THU_7' ? 'bg-amber-950/10' : ''
+                            }`}
+                          >
                             {/* CỘT THỨ (Gộp 5 dòng cho mỗi Thứ) */}
                             {pIdx === 0 && (
                               <td 
                                 rowSpan={5}
-                                className="p-2 text-center font-black text-xs text-brand-300 print:text-black bg-slate-950 print:bg-slate-100 border-r border-slate-800 print:border-black sticky left-0 z-20 min-w-[85px] shadow-xl align-middle"
+                                className={`p-2 text-center font-black text-xs print:text-black border-r border-slate-800 print:border-black sticky left-0 z-20 min-w-[85px] shadow-xl align-middle ${
+                                  d.key === 'THU_7'
+                                    ? 'bg-amber-950 text-amber-300 border-amber-800'
+                                    : 'bg-slate-950 text-brand-300 print:bg-slate-100'
+                                }`}
                               >
                                 <div className="flex flex-col items-center justify-center gap-1">
-                                  <span className="text-sm font-black uppercase text-white print:text-black tracking-wider">{d.label}</span>
+                                  <span className="text-sm font-black uppercase tracking-wider">{d.label}</span>
                                   <span className="text-[10px] text-slate-400 font-medium">(5 Tiết)</span>
                                 </div>
                               </td>
