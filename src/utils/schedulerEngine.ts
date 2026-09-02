@@ -1,12 +1,37 @@
 import { ParsedTeachingUnit } from './assignmentParser';
 
 export const DAYS_LIST = ['THU_2', 'THU_3', 'THU_4', 'THU_5', 'THU_6', 'THU_7'];
-export const PERIODS_LIST = [1, 2, 3, 4, 5]; // 5 tiết mỗi buổi
+export const PERIODS_LIST = [1, 2, 3, 4, 5]; // 5 tiết mỗi buổi sáng
 
 export interface ScheduleResultEntry {
   subject: string;
   teacher: string;
 }
+
+// Danh mục môn học và trọng số sư phạm chuẩn Bộ GD&ĐT
+const SUBJECT_PEDAGOGY_RULES: Record<string, {
+  preferredPeriods: number[]; // Tiết ưu tiên (1-indexed)
+  penaltyPeriods: number[];   // Tiết cần tránh
+  allowDouble: boolean;       // Cho phép / ưu tiên tiết đôi (2 tiết liền nhau)
+  maxPerDay: number;          // Số tiết tối đa trong 1 ngày của 1 lớp
+  isHeavy: boolean;           // Môn tư duy nặng
+  isActivity: boolean;        // Môn vận động / nghệ thuật
+}> = {
+  'toán': { preferredPeriods: [1, 2, 3], penaltyPeriods: [5], allowDouble: true, maxPerDay: 2, isHeavy: true, isActivity: false },
+  'ngữ văn': { preferredPeriods: [1, 2, 3], penaltyPeriods: [5], allowDouble: true, maxPerDay: 2, isHeavy: true, isActivity: false },
+  'văn': { preferredPeriods: [1, 2, 3], penaltyPeriods: [5], allowDouble: true, maxPerDay: 2, isHeavy: true, isActivity: false },
+  'khtn': { preferredPeriods: [1, 2, 3, 4], penaltyPeriods: [5], allowDouble: true, maxPerDay: 2, isHeavy: true, isActivity: false },
+  'tiếng anh': { preferredPeriods: [1, 2, 3, 4], penaltyPeriods: [5], allowDouble: false, maxPerDay: 1, isHeavy: true, isActivity: false },
+  'lịch sử': { preferredPeriods: [2, 3, 4], penaltyPeriods: [], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
+  'địa lí': { preferredPeriods: [2, 3, 4], penaltyPeriods: [], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
+  'gdcd': { preferredPeriods: [3, 4, 5], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
+  'tin học': { preferredPeriods: [3, 4, 5], penaltyPeriods: [], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
+  'gd thể chất': { preferredPeriods: [3, 4, 5], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: true },
+  'mĩ thuật': { preferredPeriods: [4, 5, 3], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: true },
+  'âm nhạc': { preferredPeriods: [4, 5, 3], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: true },
+  'hđtn-hn': { preferredPeriods: [4, 5], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: true },
+  'gd địa phương': { preferredPeriods: [3, 4, 5], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
+};
 
 export function autoScheduleAllClasses(
   assignments: ParsedTeachingUnit[],
@@ -23,12 +48,20 @@ export function autoScheduleAllClasses(
   // Occupancy trackers for O(1) collision detection
   const teacherOccupancy: Record<string, Set<string>> = {};
   const classOccupancy: Record<string, Set<string>> = {};
-  const classSubjectDayCount: Record<string, number> = {};
+  
+  // classDaySubjectCount[class_day_subject] = number
+  const classDaySubjectCount: Record<string, number> = {};
+  // classDayHeavyCount[class_day] = number (số môn nặng trong ngày)
+  const classDayHeavyCount: Record<string, number> = {};
+  // teacherDayPeriods[teacher_day] = Set<period>
+  const teacherDayPeriods: Record<string, Set<number>> = {};
 
   const getSlotKey = (day: string, p: number) => `${day}_${p}`;
   const getScheduleKey = (cls: string, day: string, p: number) => `${cls}_${day}_${p}`;
 
-  // 1. Cố định Chào Cờ (Thứ 2 Tiết 1) và Sinh Hoạt Lớp (Thứ 7 Tiết 5) cho tất cả các lớp
+  // 1. CỐ ĐỊNH CHUẨN SƯ PHẠM:
+  // - Chào Cờ (SHDC): Thứ 2 Tiết 1
+  // - Sinh Hoạt Lớp (SHL): Thứ 7 Tiết 5
   classList.forEach((cls) => {
     // Chào cờ
     const ccKey = getScheduleKey(cls, 'THU_2', 1);
@@ -42,109 +75,189 @@ export function autoScheduleAllClasses(
     classOccupancy[cls].add(getSlotKey('THU_7', 5));
   });
 
-  // 2. Chuyển đổi các phân công thành các tiết học đơn lẻ
-  interface IndividualPeriod {
+  // 2. NHÓM PHÂN CÔNG THÀNH CÁC BLOCK SƯ PHẠM:
+  // - Gom thành Tiết Đôi (2 tiết) cho Ngữ văn / Toán / KHTN khi phù hợp
+  // - Tiết Đơn (1 tiết) cho các môn còn lại
+  interface SchedulingBlock {
     teacherName: string;
     subjectName: string;
     className: string;
-    unitIndex: number;
-    totalPeriods: number;
+    blockSize: number; // 1 hoặc 2 tiết
+    priority: number;  // Độ ưu tiên xếp trước
   }
 
-  const units: IndividualPeriod[] = [];
+  const blocks: SchedulingBlock[] = [];
   let totalRequested = classList.length * 2; // Gồm Chào cờ & SHL
 
   assignments.forEach((asn) => {
     totalRequested += asn.periodsPerWeek;
-    for (let i = 0; i < asn.periodsPerWeek; i++) {
-      units.push({
+    let remaining = asn.periodsPerWeek;
+    const subKey = asn.subjectName.toLowerCase();
+    const rule = SUBJECT_PEDAGOGY_RULES[subKey] || {
+      preferredPeriods: [1, 2, 3, 4],
+      penaltyPeriods: [],
+      allowDouble: false,
+      maxPerDay: 1,
+      isHeavy: false,
+      isActivity: false,
+    };
+
+    // Tạo block đôi cho Ngữ Văn (hoặc Toán/KHTN nếu 4 tiết/tuần -> 2 block đôi)
+    while (remaining >= 2 && rule.allowDouble && (subKey.includes('văn') || subKey.includes('khtn'))) {
+      blocks.push({
         teacherName: asn.teacherName,
         subjectName: asn.subjectName,
         className: asn.className,
-        unitIndex: i,
-        totalPeriods: asn.periodsPerWeek,
+        blockSize: 2,
+        priority: 100, // Ưu tiên cao nhất
       });
+      remaining -= 2;
+    }
+
+    // Các tiết đơn lẻ còn lại
+    while (remaining > 0) {
+      blocks.push({
+        teacherName: asn.teacherName,
+        subjectName: asn.subjectName,
+        className: asn.className,
+        blockSize: 1,
+        priority: rule.isHeavy ? 80 : (rule.isActivity ? 40 : 60),
+      });
+      remaining -= 1;
     }
   });
 
-  // Sắp xếp ưu tiên môn nhiều tiết trước (Toán, Văn, KHTN, Anh)
-  units.sort((a, b) => b.totalPeriods - a.totalPeriods);
-
-  // Danh sách tất cả 30 ô trong tuần (6 ngày x 5 tiết)
-  const allSlots: { day: string; period: number }[] = [];
-  DAYS_LIST.forEach((day) => {
-    PERIODS_LIST.forEach((p) => {
-      allSlots.push({ day, period: p });
-    });
+  // Sắp xếp block: Block đôi và môn nặng xếp trước
+  blocks.sort((a, b) => {
+    if (b.blockSize !== a.blockSize) return b.blockSize - a.blockSize;
+    return b.priority - a.priority;
   });
 
-  const unplacedUnits: IndividualPeriod[] = [];
+  // Danh sách các ngày trong tuần
+  const daysPool = [...DAYS_LIST];
 
-  // Pass 1: Xếp với ràng buộc phân bổ đều môn trong tuần
-  units.forEach((unit) => {
-    const { teacherName, subjectName, className } = unit;
+  // Helper tính điểm sư phạm cho vị trí (day, period)
+  const calculatePedagogicalScore = (
+    block: SchedulingBlock,
+    day: string,
+    startPeriod: number
+  ): number => {
+    const { subjectName, teacherName, className, blockSize } = block;
+    const subKey = subjectName.toLowerCase();
+    const rule = SUBJECT_PEDAGOGY_RULES[subKey] || {
+      preferredPeriods: [1, 2, 3, 4],
+      penaltyPeriods: [5],
+      allowDouble: false,
+      maxPerDay: 2,
+      isHeavy: false,
+      isActivity: false,
+    };
+
+    let score = 100;
+
+    // 1. Phù hợp nhịp sinh học buổi sáng:
+    for (let i = 0; i < blockSize; i++) {
+      const p = startPeriod + i;
+      if (rule.preferredPeriods.includes(p)) {
+        score += 35; // Thưởng tiết lý tưởng (Tiết 1-3 cho Toán/Văn/Anh)
+      }
+      if (rule.penaltyPeriods.includes(p)) {
+        score -= 40; // Phạt nếu xếp môn nặng vào tiết 5 đói mệt
+      }
+    }
+
+    // 2. Cân bằng tải môn nặng trong ngày của lớp:
+    const heavyKey = `${className}_${day}`;
+    const heavyCount = classDayHeavyCount[heavyKey] || 0;
+    if (rule.isHeavy) {
+      if (heavyCount >= 3) score -= 60; // Tránh ngày có quá 3 môn nặng
+      else score += 10;
+    }
+
+    // 3. Phân bổ đều các ngày trong tuần (tránh dồn vào 1 ngày):
+    const csdKey = `${className}_${day}_${subjectName}`;
+    const currentSubjectCount = classDaySubjectCount[csdKey] || 0;
+    if (currentSubjectCount === 0) {
+      score += 40; // Rất tốt: môn được trải sang ngày mới
+    } else {
+      score -= 20;
+    }
+
+    // 4. Tiện lợi cho Giáo Viên (Chống tiết trống / "nhảy cóc"):
+    const tdKey = `${teacherName}_${day}`;
+    const teacherPeriods = teacherDayPeriods[tdKey];
+    if (teacherPeriods && teacherPeriods.size > 0) {
+      // Nếu GV đã có tiết trong ngày, thưởng lớn nếu xếp LIỀN KỀ
+      const hasAdjacent = Array.from(teacherPeriods).some(
+        (tp) => tp === startPeriod - 1 || tp === startPeriod + blockSize
+      );
+      if (hasAdjacent) {
+        score += 50; // Gom ca dạy liền nhau cho GV!
+      } else {
+        score -= 25; // Tránh tạo lỗ hổng trống tiết
+      }
+    }
+
+    return score;
+  };
+
+  // VÒNG 1: XẾP THEO CHUẨN SƯ PHẠM VÀ RÀNG BUỘC CHẶT
+  const unplacedBlocks: SchedulingBlock[] = [];
+
+  blocks.forEach((block) => {
+    const { teacherName, subjectName, className, blockSize } = block;
 
     if (!classOccupancy[className]) classOccupancy[className] = new Set();
     if (!teacherOccupancy[teacherName]) teacherOccupancy[teacherName] = new Set();
 
-    type ScoredSlot = { day: string; period: number; score: number };
-    const candidates: ScoredSlot[] = [];
+    type Candidate = { day: string; startPeriod: number; score: number };
+    const candidates: Candidate[] = [];
 
-    allSlots.forEach(({ day, period }) => {
-      const slotKey = getSlotKey(day, period);
-      const schedKey = getScheduleKey(className, day, period);
+    daysPool.forEach((day) => {
+      // Kiểm tra giới hạn môn trong ngày
+      const csdKey = `${className}_${day}_${subjectName}`;
+      const subKey = subjectName.toLowerCase();
+      const rule = SUBJECT_PEDAGOGY_RULES[subKey] || { maxPerDay: 1 };
+      const currentCount = classDaySubjectCount[csdKey] || 0;
 
-      // 1. Lớp phải trống
-      if (classOccupancy[className].has(slotKey) || schedule[schedKey]) return;
+      if (currentCount + blockSize > rule.maxPerDay && currentCount > 0) {
+        return; // Đã quá số tiết tối đa cho phép của môn trong ngày
+      }
 
-      // 2. Giáo viên phải trống
-      if (teacherOccupancy[teacherName].has(slotKey)) return;
+      // Quét các vị trí có thể đặt block (Tiết 1 đến 5 - blockSize + 1)
+      const maxStart = 5 - blockSize + 1;
+      for (let p = 1; p <= maxStart; p++) {
+        let isFree = true;
 
-      // 3. Giới hạn số tiết của môn trong ngày
-      const csdKey = `${className}_${subjectName}_${day}`;
-      const countToday = classSubjectDayCount[csdKey] || 0;
-      const isMain = ['toán', 'văn', 'ngữ văn', 'khtn', 'tiếng anh'].includes(subjectName.toLowerCase());
-      const maxPerDay = isMain ? 2 : 1;
+        for (let offset = 0; offset < blockSize; offset++) {
+          const currentP = p + offset;
+          const slotKey = getSlotKey(day, currentP);
+          const schedKey = getScheduleKey(className, day, currentP);
 
-      if (countToday >= maxPerDay) return;
+          // Lớp phải trống & GV phải trống
+          if (classOccupancy[className].has(slotKey) || teacherOccupancy[teacherName].has(slotKey) || schedule[schedKey]) {
+            isFree = false;
+            break;
+          }
+        }
 
-      let score = 100;
-      if (countToday === 0) score += 30; // Ưu tiên ngày chưa có môn này
-
-      candidates.push({ day, period, score });
+        if (isFree) {
+          const score = calculatePedagogicalScore(block, day, p);
+          candidates.push({ day, startPeriod: p, score });
+        }
+      }
     });
 
     if (candidates.length > 0) {
+      // Chọn vị trí có điểm sư phạm cao nhất
       candidates.sort((a, b) => b.score - a.score);
       const chosen = candidates[0];
 
-      const slotKey = getSlotKey(chosen.day, chosen.period);
-      const schedKey = getScheduleKey(className, chosen.day, chosen.period);
+      for (let offset = 0; offset < blockSize; offset++) {
+        const p = chosen.startPeriod + offset;
+        const slotKey = getSlotKey(chosen.day, p);
+        const schedKey = getScheduleKey(className, chosen.day, p);
 
-      schedule[schedKey] = {
-        subject: subjectName,
-        teacher: teacherName,
-      };
-
-      classOccupancy[className].add(slotKey);
-      teacherOccupancy[teacherName].add(slotKey);
-
-      const csdKey = `${className}_${subjectName}_${chosen.day}`;
-      classSubjectDayCount[csdKey] = (classSubjectDayCount[csdKey] || 0) + 1;
-    } else {
-      unplacedUnits.push(unit);
-    }
-  });
-
-  // Pass 2: Xếp vét các tiết còn lại (nới lỏng giới hạn số tiết/ngày nhưng TUYỆT ĐỐI không trùng GV và trùng Lớp)
-  unplacedUnits.forEach((unit) => {
-    const { teacherName, subjectName, className } = unit;
-
-    for (const { day, period } of allSlots) {
-      const slotKey = getSlotKey(day, period);
-      const schedKey = getScheduleKey(className, day, period);
-
-      if (!classOccupancy[className].has(slotKey) && !teacherOccupancy[teacherName].has(slotKey) && !schedule[schedKey]) {
         schedule[schedKey] = {
           subject: subjectName,
           teacher: teacherName,
@@ -152,7 +265,53 @@ export function autoScheduleAllClasses(
 
         classOccupancy[className].add(slotKey);
         teacherOccupancy[teacherName].add(slotKey);
-        break;
+
+        // Cập nhật thống kê ngày
+        const tdKey = `${teacherName}_${chosen.day}`;
+        if (!teacherDayPeriods[tdKey]) teacherDayPeriods[tdKey] = new Set();
+        teacherDayPeriods[tdKey].add(p);
+      }
+
+      const csdKey = `${className}_${chosen.day}_${subjectName}`;
+      classDaySubjectCount[csdKey] = (classDaySubjectCount[csdKey] || 0) + blockSize;
+
+      const subKey = subjectName.toLowerCase();
+      if (SUBJECT_PEDAGOGY_RULES[subKey]?.isHeavy) {
+        const heavyKey = `${className}_${chosen.day}`;
+        classDayHeavyCount[heavyKey] = (classDayHeavyCount[heavyKey] || 0) + blockSize;
+      }
+    } else {
+      unplacedBlocks.push(block);
+    }
+  });
+
+  // VÒNG 2: XẾP VÉT CÁC TIẾT CÒN LẠI (Tách nhỏ block nếu cần, đảm bảo 100% không trùng)
+  unplacedBlocks.forEach((block) => {
+    const { teacherName, subjectName, className, blockSize } = block;
+
+    // Tách thành từng tiết đơn lẻ
+    for (let b = 0; b < blockSize; b++) {
+      let placed = false;
+
+      for (const day of daysPool) {
+        if (placed) break;
+
+        for (let p = 1; p <= 5; p++) {
+          const slotKey = getSlotKey(day, p);
+          const schedKey = getScheduleKey(className, day, p);
+
+          if (!classOccupancy[className].has(slotKey) && !teacherOccupancy[teacherName].has(slotKey) && !schedule[schedKey]) {
+            schedule[schedKey] = {
+              subject: subjectName,
+              teacher: teacherName,
+            };
+
+            classOccupancy[className].add(slotKey);
+            teacherOccupancy[teacherName].add(slotKey);
+            placed = true;
+            break;
+          }
+        }
       }
     }
   });
