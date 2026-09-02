@@ -1,0 +1,67 @@
+// Dữ liệu BẢNG PHÂN CÔNG CHUYÊN MÔN NĂM HỌC 2026 - 2027 (Trường THCS Phan Bội Châu)
+export interface PhanBoiChauTeacherData {
+  stt: number;
+  name: string;
+  duty?: string;        // Chức vụ: Hiệu trưởng, PHT, Tổ Trưởng, GV...
+  quota: number;        // Tiết quy định (định mức)
+  rawTeachingText: string; // Chuỗi phân công như trong văn bản: "Toán (7A2, 8A6, 9A7) + Tin (7A1, 7A2, 7A3, 7A4)"
+}
+
+export const PHAN_BOI_CHAU_DATA: PhanBoiChauTeacherData[] = [
+  { stt: 1, name: 'Lưu Kiên Trung', duty: 'Hiệu trưởng', quota: 2, rawTeachingText: 'GDĐP (6A4, 6A7)' },
+  { stt: 2, name: 'Trần Thị Hồng Minh', duty: 'PHT', quota: 4, rawTeachingText: 'Văn (6A2)' },
+  { stt: 3, name: 'Huỳnh Tấn Cường', duty: 'PHT', quota: 4, rawTeachingText: 'Toán (6A2)' },
+  { stt: 4, name: 'Tạ Thanh Thủy', duty: 'Tổ Trưởng', quota: 16, rawTeachingText: 'Toán (7A2, 8A6, 9A7) + Tin (7A1, 7A2, 7A3, 7A4)' },
+  { stt: 5, name: 'Trần Trung Kiên', duty: 'T.Phó', quota: 18, rawTeachingText: 'Toán (6A4, 8A1, 8A8) + Tin (6A1, 6A2, 6A3, 6A4, 6A5)' },
+  { stt: 6, name: 'Nguyễn Thị Huyền Ngọc', duty: 'Tổ Trưởng', quota: 16, rawTeachingText: 'Toán (7A1, 7A3, 7A5) + HĐTN-HN (8A7)' },
+  { stt: 7, name: 'Phạm Văn Khiêm', duty: 'GV', quota: 19, rawTeachingText: 'Toán (7A4, 7A7, 9A2) + Tin (7A5, 7A6, 7A7)' },
+  { stt: 8, name: 'Lý Khánh Phong', duty: 'GV', quota: 19, rawTeachingText: 'Toán (7A6, 7A7, 9A5) + HĐTN-HN (8A1)' },
+  { stt: 9, name: 'Ngô Thị Thùy Rơi', duty: 'GV', quota: 19, rawTeachingText: 'Toán (7A1, 7A2, 8A3) + HĐTN-HN (7A1)' },
+  { stt: 10, name: 'Nguyễn Thị Thùy', duty: 'GV', quota: 19, rawTeachingText: 'Toán (8A2, 8A4, 8A5) + HĐTN-HN (8A2)' },
+  { stt: 11, name: 'Chế Thị Ngọc Ánh', duty: 'GV', quota: 19, rawTeachingText: 'Toán (6A3, 6A5, 8A7) + Tin (6A6, 6A7, 6A8)' },
+  { stt: 12, name: 'Đặng Bích Thảo', duty: 'TPT Đội', quota: 19, rawTeachingText: 'Toán (6A1, 6A8, 9A3) + HĐTN-HN (8A8)' },
+  { stt: 13, name: 'Từ Thị Thu Trang', duty: 'GV', quota: 19, rawTeachingText: 'Tin (6A4, 8A1, 8A2, 8A3, 8A4, 8A5, 8A6) + HĐTN-HN (8A4)' },
+  { stt: 14, name: 'Nguyễn Thị Minh Hiền', duty: 'Tổ Trưởng', quota: 16, rawTeachingText: 'KHTN (9A1, 9A2) + KHTN (8A1, 8A2, 8A4, 8A5, 8A7) + KHTN (7A1, 7A2, 7A3)' },
+  { stt: 15, name: 'Nguyễn Triều Thông', duty: 'GV', quota: 19, rawTeachingText: 'KHTN (9A7, 9A8, 9A2, 9A3) + KHTN (8A3, 8A7) + KHTN (7A1, 7A2, 7A3, 7A4, 7A5, 7A6, 7A7)' },
+  { stt: 16, name: 'Cao Thị Tố Quyên', duty: 'GV', quota: 19, rawTeachingText: 'KHTN (9A3, 9A4, 9A5, 9A6) + KHTN (8A6, 8A7) + HĐTN-HN (8A5)' },
+  { stt: 17, name: 'Phan Ngọc Sơn', duty: 'GV', quota: 19, rawTeachingText: 'KHTN (8A1, 8A2, 8A3, 8A4, 8A5, 8A6, 8A7, 8A8) + HĐTN-HN (8A6, 8A7, 8A8) + GDĐP (7A1, 7A2, 7A3)' },
+  { stt: 18, name: 'Phan Thị Thủy', duty: 'GV', quota: 19, rawTeachingText: 'KHTN (9A1, 9A2, 9A3, 9A4, 9A5, 9A6, 9A7, 9A8) + GDĐP (6A1, 6A2, 6A3, 6A4)' },
+  { stt: 19, name: 'Nguyễn Ngọc Hoan', duty: 'T.Phó', quota: 18, rawTeachingText: 'GDĐP (6A5, 6A6, 6A7, 6A8, 8A4, 8A5, 8A6, 8A7) + KHTN (6A1, 6A2, 6A3)' },
+  { stt: 20, name: 'Trần Thị Yến', duty: 'GV', quota: 19, rawTeachingText: 'GDĐP (8A1, 8A2, 8A3) + KHTN (6A4, 6A5, 6A6, 6A7, 6A8) + HĐTN-HN (8A6)' },
+  { stt: 21, name: 'Tuyển Thị Hương', duty: 'GV', quota: 19, rawTeachingText: 'KHTN (6A1, 6A2, 6A3, 6A4, 6A5, 6A6, 6A7, 6A8) + HĐTN-HN (7A5)' },
+  { stt: 22, name: 'Nguyễn Hương Mai Hướng Dương', duty: 'GV', quota: 19, rawTeachingText: 'KHTN (7A1, 7A2, 7A3, 7A4, 7A5, 7A6, 7A7) + KHTN (6A1, 6A2, 6A3) + HĐTN-HN (8A3)' },
+  { stt: 23, name: 'Nguyễn Thị Thùy Trang', duty: 'GV', quota: 19, rawTeachingText: 'KHTN (7A1, 7A2, 7A3, 7A4, 7A5, 7A6, 7A7) + GDĐP (7A4, 7A5, 7A6, 7A7)' },
+  { stt: 24, name: 'Đỗ Thị Loan', duty: 'Tổ Trưởng', quota: 16, rawTeachingText: 'Sử (6A1, 6A2, 6A3, 6A4, 6A5, 6A6, 6A7, 6A8) + HĐTN-HN (6A1)' },
+  { stt: 25, name: 'Mai Thị Tam', duty: 'GV', quota: 19, rawTeachingText: 'Sử (7A1, 7A2, 7A3, 7A4, 7A5, 7A6, 7A7) + HĐTN-HN (6A7)' },
+  { stt: 26, name: 'Đỗ Thị Hải Yến', duty: 'GV', quota: 19, rawTeachingText: 'Sử (7A5, 7A6, 7A7, 8A1, 8A2, 8A3, 8A4, 8A5, 8A6, 8A7, 8A8) + GDĐP (9A1, 9A2, 9A3, 9A4)' },
+  { stt: 27, name: 'Nguyễn Thị Dung', duty: 'GV', quota: 19, rawTeachingText: 'Sử (8A1, 8A2, 8A3, 8A4, 8A5, 8A6, 8A7, 9A1, 9A2, 9A3, 9A4, 9A5, 9A6, 9A7, 9A8) + GDĐP (9A5, 9A6, 9A7, 9A8)' },
+  { stt: 28, name: 'Phan Thị Thanh Trúc', duty: 'GV', quota: 19, rawTeachingText: 'Sử (9A1, 9A2, 9A3, 9A4, 9A5, 9A6, 9A7, 9A8) + HĐTN-HN (6A6) + GDĐP (7A1, 7A2, 7A3)' },
+  { stt: 29, name: 'Nguyễn Bích Yên', duty: 'T.Phó', quota: 18, rawTeachingText: 'GDCD (6A1, 6A2, 6A3, 6A4, 6A5, 6A6, 6A7, 6A8, 7A1, 7A2, 7A3, 7A4, 7A5, 7A6, 7A7) + HĐTN-HN + GDĐP' },
+  { stt: 30, name: 'Lê Văn Thanh', duty: 'GV', quota: 19, rawTeachingText: 'GDCD (8A1, 8A2, 8A3, 8A4, 8A5, 8A6, 8A7, 8A8, 9A1, 9A2, 9A3, 9A4, 9A5, 9A6, 9A7, 9A8) + HĐTN-HN (9A7) + GDĐP' },
+  { stt: 31, name: 'Ngô Thị Thanh Nhàn', duty: 'GV', quota: 19, rawTeachingText: 'Địa (6A1, 6A2, 6A3, 6A4, 6A5, 6A6, 6A7, 6A8, 7A1, 7A2, 7A3, 7A4) + HĐTN-HN (7A4)' },
+  { stt: 32, name: 'Nguyễn Thị Hồng Tâm', duty: 'GV', quota: 19, rawTeachingText: 'Địa (7A5, 7A6, 7A7, 8A1, 8A2, 8A3, 8A4, 8A5, 8A6, 8A7, 8A8, 9A1) + HĐTN-HN (7A6)' },
+  { stt: 33, name: 'Lê Thị Hà Giang', duty: 'GV', quota: 19, rawTeachingText: 'Địa (9A2, 9A3, 9A4, 9A5, 9A6, 9A7, 9A8) + HĐTN-HN (7A7)' },
+  { stt: 34, name: 'Nguyễn Thị Thu Huyền', duty: 'Tổ Trưởng', quota: 16, rawTeachingText: 'Tiếng Anh (6A1, 6A2, 6A3, 6A4)' },
+  { stt: 35, name: 'Đặng Thị Như Thủy', duty: 'GV', quota: 19, rawTeachingText: 'Tiếng Anh (6A5, 6A6, 6A7, 6A8) + HĐTN-HN (6A5)' },
+  { stt: 36, name: 'Trần Thị Thanh Nhàn', duty: 'GV', quota: 19, rawTeachingText: 'Tiếng Anh (7A1, 7A2, 7A3, 7A4) + HĐTN-HN (6A2)' },
+  { stt: 37, name: 'Lê Thị Oanh', duty: 'GV', quota: 19, rawTeachingText: 'Tiếng Anh (7A5, 7A6, 7A7)' },
+  { stt: 38, name: 'Lê Minh Thanh Lan', duty: 'GV', quota: 19, rawTeachingText: 'Tiếng Anh (8A1, 8A2, 8A3, 8A4) + HĐTN-HN (6A4)' },
+  { stt: 39, name: 'Lê Thị Hoài Thương', duty: 'GV', quota: 19, rawTeachingText: 'Tiếng Anh (8A5, 8A6, 8A7, 8A8) + HĐTN-HN (6A3)' },
+  { stt: 40, name: 'Hồ Thị Thu Hương', duty: 'TPT', quota: 6, rawTeachingText: 'Tiếng Anh (9A7, 9A8)' },
+  { stt: 41, name: 'Tôn Thất Thảo Lan', duty: 'GV', quota: 19, rawTeachingText: 'Tiếng Anh (9A1, 9A2, 9A3, 9A4, 9A5, 9A6)' },
+  { stt: 42, name: 'Nguyễn Văn Hải', duty: 'Tổ Trưởng', quota: 16, rawTeachingText: 'Văn (6A1, 6A2, 6A3)' },
+  { stt: 43, name: 'Nguyễn Văn Hùng', duty: 'GV', quota: 19, rawTeachingText: 'Văn (6A4, 6A7, 6A8) + HĐTN-HN (6A8)' },
+  { stt: 44, name: 'Võ Thị Oanh', duty: 'GV', quota: 19, rawTeachingText: 'Văn (6A5, 6A6) + HĐTN-HN (7A2)' },
+  { stt: 45, name: 'Võ Thị Nguyệt', duty: 'T.Phó', quota: 18, rawTeachingText: 'Văn (7A1, 7A2, 7A3) + HĐTN-HN (8A7)' },
+  { stt: 46, name: 'Nguyễn T Ngọc Sương', duty: 'GV', quota: 19, rawTeachingText: 'Văn (7A4, 7A5, 7A6, 7A7)' },
+  { stt: 47, name: 'Phạm Thị Ngọc Nữ', duty: 'GV', quota: 19, rawTeachingText: 'Văn (8A1, 8A2, 8A3) + HĐTN-HN (8A1)' },
+  { stt: 48, name: 'Trần Thị Hà', duty: 'GV', quota: 19, rawTeachingText: 'Văn (8A4, 8A5, 8A6) + HĐTN-HN (7A1)' },
+  { stt: 49, name: 'Hoàng Hải Triều', duty: 'GV', quota: 19, rawTeachingText: 'Văn (8A7, 8A8, 9A1) + HĐTN-HN (7A8)' },
+  { stt: 50, name: 'Nguyễn Đức Bình', duty: 'GV', quota: 19, rawTeachingText: 'Văn (9A2, 9A3, 9A4)' },
+  { stt: 51, name: 'Nguyễn Viết Cương', duty: 'Tổ Trưởng', quota: 16, rawTeachingText: 'GDTC (6A1, 6A2, 6A3, 6A4, 6A5, 6A6, 6A7, 6A8, 7A1, 7A2, 7A3, 7A4)' },
+  { stt: 52, name: 'Đỗ Hải Nam', duty: 'GV', quota: 19, rawTeachingText: 'GDTC (7A5, 7A6, 7A7, 8A1, 8A2, 8A3, 8A4, 8A5, 8A6, 8A7, 8A8, 9A1, 9A2, 9A3, 9A4, 9A5)' },
+  { stt: 53, name: 'Nguyễn Tuấn Cương', duty: 'GV', quota: 19, rawTeachingText: 'GDTC (9A6, 9A7, 9A8, 6A4, 6A5, 6A6, 6A7, 6A8, 7A5, 7A6, 7A7)' },
+  { stt: 54, name: 'Chu Văn Huê', duty: 'GV', quota: 19, rawTeachingText: 'Mĩ Thuật (6A1, 6A2, 6A3, 6A4, 6A5, 6A6, 6A7, 6A8, 7A1, 7A2, 7A3, 7A4, 7A5, 7A6, 7A7, 8A1, 8A2, 8A3, 8A4, 8A5, 8A6, 8A7, 8A8, 9A1, 9A2, 9A3, 9A4, 9A5, 9A6, 9A7, 9A8)' },
+  { stt: 55, name: 'Nguyễn Thị Thủy', duty: 'GV', quota: 19, rawTeachingText: 'Âm Nhạc (6A1, 6A2, 6A3, 6A4, 6A5, 6A6, 6A7, 6A8, 7A1, 7A2, 7A3, 7A4, 7A5, 7A6, 7A7, 8A1, 8A2, 8A3, 8A4)' },
+  { stt: 56, name: 'Lý Thị Quế', duty: 'GV', quota: 19, rawTeachingText: 'Âm Nhạc (8A5, 8A6, 8A7, 8A8, 9A1, 9A2, 9A3, 9A4, 9A5, 9A6, 9A7, 9A8) + HĐTN-HN (6A3)' }
+];
