@@ -224,36 +224,27 @@ export const App: React.FC = () => {
   const handleExportExcel = () => {
     const wb = XLSX.utils.book_new();
 
-    // Sheet 1: Ma Trận TKB Toàn Trường
+    // Sheet 1: Ma Trận TKB Toàn Trường (Thứ & Tiết Theo Hàng Dọc, Các Lớp Theo Cột Ngang)
     const masterRows: any[] = [];
     masterRows.push([schoolName.toUpperCase()]);
     masterRows.push(['THỜI KHÓA BIỂU TOÀN TRƯỜNG - NĂM HỌC 2026 - 2027']);
     masterRows.push([schoolYear]);
     masterRows.push([]);
 
-    // Header ngày & tiết
-    const headerRow1 = ['LỚP'];
+    // Header: Thứ, Tiết, Danh sách lớp
+    const headerRow = ['Thứ', 'Tiết', ...classList.map(c => `Lớp ${c}`)];
+    masterRows.push(headerRow);
+
+    // Từng dòng: Thứ 2 Tiết 1-5 đến Thứ 7 Tiết 1-5
     DAYS.forEach((d) => {
-      headerRow1.push(d.label, '', '', '', '');
-    });
-    masterRows.push(headerRow1);
-
-    const headerRow2 = [''];
-    DAYS.forEach(() => {
-      [1, 2, 3, 4, 5].forEach((p) => headerRow2.push(`Tiết ${p}`));
-    });
-    masterRows.push(headerRow2);
-
-    // Dữ liệu từng lớp
-    classList.forEach((cls) => {
-      const row = [cls];
-      DAYS.forEach((d) => {
-        [1, 2, 3, 4, 5].forEach((p) => {
+      [1, 2, 3, 4, 5].forEach((p) => {
+        const row = [d.label, `Tiết ${p}`];
+        classList.forEach((cls) => {
           const entry = scheduleData[`${cls}_${d.key}_${p}`];
           row.push(entry ? `${entry.subject} (${entry.teacher})` : '');
         });
+        masterRows.push(row);
       });
-      masterRows.push(row);
     });
 
     const wsMaster = XLSX.utils.aoa_to_sheet(masterRows);
@@ -485,12 +476,12 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* THANH ĐIỀU HƯỚNG VÀ CHUYỂN NHANH CÁC NGÀY (CỘT DỌC CỐ ĐỊNH & KÉO CHUỘT) */}
+              {/* THANH ĐIỀU HƯỚNG LỚP HỌC VÀ KHỐI LỚP (CỘT DỌC THỨ/TIẾT & KÉO CHUỘT NGANG QUA CÁC LỚP) */}
               <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800/80 flex flex-wrap items-center justify-between gap-3 no-print">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
                     <MoveHorizontal className="w-4 h-4 text-brand-400" />
-                    <span>Xem Nhanh Ngày:</span>
+                    <span>Lướt Xem Các Lớp:</span>
                   </span>
 
                   <button
@@ -501,13 +492,28 @@ export const App: React.FC = () => {
                     <ChevronLeft className="w-4 h-4" />
                   </button>
 
-                  {DAYS.map((d, idx) => (
+                  <button
+                    onClick={() => setSelectedGradeFilter('ALL')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      selectedGradeFilter === 'ALL'
+                        ? 'bg-brand-600 text-white shadow-md'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Tất Cả 32 Lớp
+                  </button>
+
+                  {['6', '7', '8', '9'].map((grade) => (
                     <button
-                      key={d.key}
-                      onClick={() => scrollToDay(idx)}
-                      className="px-3 py-1 bg-slate-800/80 hover:bg-brand-600 hover:text-white text-slate-300 text-xs font-bold rounded-lg border border-slate-700/80 transition-all hover:scale-105"
+                      key={grade}
+                      onClick={() => setSelectedGradeFilter(grade as any)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        selectedGradeFilter === grade
+                          ? 'bg-indigo-600 text-white shadow-md'
+                          : 'bg-slate-800 text-slate-300 hover:text-white'
+                      }`}
                     >
-                      {d.label}
+                      Khối {grade} ({classList.filter(c => c.startsWith(grade)).length} Lớp)
                     </button>
                   ))}
 
@@ -522,11 +528,11 @@ export const App: React.FC = () => {
 
                 <div className="flex items-center gap-2 text-xs text-amber-400 bg-amber-950/40 px-3 py-1 rounded-xl border border-amber-800/50">
                   <MoveHorizontal className="w-3.5 h-3.5" />
-                  <span>Mẹo: Cột Lớp bên trái được ghim cố định. Bạn có thể <strong>click giữ chuột kéo ngang</strong> để xem từ Thứ 2 đến Thứ 7!</span>
+                  <span>Cột dọc: <strong>Thứ & Tiết</strong> • Hàng ngang: <strong>Các Lớp Học</strong> (Click giữ chuột kéo ngang để xem 32 lớp)</span>
                 </div>
               </div>
 
-              {/* BẢNG THỜI KHÓA BIỂU TẤT CẢ CÁC LỚP (CÓ CỘT DỌC GHIM CỐ ĐỊNH & KÉO CHUỘT) */}
+              {/* BẢNG THỜI KHÓA BIỂU: THỨ & TIẾT THEO CỘT DỌC, CÁC LỚP THEO HÀNG NGANG */}
               <div 
                 ref={tableContainerRef}
                 onMouseDown={handleMouseDown}
@@ -536,85 +542,98 @@ export const App: React.FC = () => {
                 className={`overflow-x-auto rounded-2xl border-2 border-slate-800 print:border-2 print:border-black max-h-[75vh] select-none ${
                   isDragging ? 'cursor-grabbing' : 'cursor-grab'
                 }`}
-                title="Click và giữ chuột để kéo ngang bảng qua các ngày"
+                title="Click và giữ chuột để kéo ngang bảng qua các lớp học"
               >
                 <table className="w-full text-center border-collapse text-xs print:text-black">
                   <thead className="sticky top-0 z-30 bg-slate-950 print:bg-slate-100 border-b-2 border-slate-800 print:border-b-2 print:border-black shadow-md">
                     <tr>
-                      {/* CỘT DỌC CỐ ĐỊNH: LỚP */}
+                      {/* Cột Thứ cố định góc trái */}
                       <th 
-                        rowSpan={2} 
-                        className="p-3 font-bold text-slate-100 print:text-black uppercase w-24 min-w-[90px] text-left pl-4 sticky left-0 z-40 bg-slate-950 print:bg-slate-100 border-r-2 border-brand-500 shadow-2xl"
+                        className="p-3 font-bold text-slate-100 print:text-black uppercase w-24 min-w-[85px] text-center sticky left-0 z-40 bg-slate-950 print:bg-slate-100 border-r border-slate-800 shadow-xl"
                       >
-                        Lớp
+                        Thứ
                       </th>
-                      {DAYS.map((d) => (
-                        <th key={d.key} colSpan={5} className="p-2 font-bold text-slate-200 print:text-black border-l border-slate-800 print:border-black text-xs uppercase bg-slate-950">
-                          {d.label}
+                      {/* Cột Tiết cố định */}
+                      <th 
+                        className="p-3 font-bold text-slate-100 print:text-black uppercase w-20 min-w-[70px] text-center sticky left-[85px] z-40 bg-slate-950 print:bg-slate-100 border-r-2 border-brand-500 shadow-xl"
+                      >
+                        Tiết
+                      </th>
+                      {/* CÁC CỘT LỚP HỌC XẾP NẰM NGANG */}
+                      {filteredClassList.map((cls) => (
+                        <th 
+                          key={cls}
+                          className="p-2.5 font-black text-sm text-brand-300 print:text-black border-l border-slate-800 print:border-black min-w-[125px] w-32 bg-slate-950 print:bg-slate-100"
+                        >
+                          Lớp {cls}
                         </th>
-                      ))}
-                    </tr>
-                    <tr className="border-t border-slate-800/80 print:border-black bg-slate-950 print:bg-slate-200 text-[11px] font-bold text-slate-400 print:text-black">
-                      {DAYS.map((d) => (
-                        <React.Fragment key={d.key}>
-                          <th className="p-1 border-l border-slate-800 print:border-black w-16">T1</th>
-                          <th className="p-1 border-l border-slate-800/40 print:border-black w-16">T2</th>
-                          <th className="p-1 border-l border-slate-800/40 print:border-black w-16">T3</th>
-                          <th className="p-1 border-l border-slate-800/40 print:border-black w-16">T4</th>
-                          <th className="p-1 border-l border-slate-800/40 print:border-black w-16">T5</th>
-                        </React.Fragment>
                       ))}
                     </tr>
                   </thead>
 
                   <tbody className="divide-y divide-slate-800/60 print:divide-black font-sans">
-                    {filteredClassList.map((cls) => (
-                      <tr key={cls} className="hover:bg-slate-800/40 transition-colors">
-                        {/* CỘT DỌC GHIM CỐ ĐỊNH BÊN TRÁI: LỚP HỌC */}
-                        <td className="p-2.5 text-left pl-4 font-black text-sm text-brand-300 print:text-black bg-slate-900 print:bg-transparent border-r-2 border-brand-500 shadow-2xl sticky left-0 z-20 min-w-[90px] w-24">
-                          Lớp {cls}
-                        </td>
-
-                        {/* Các ngày & tiết */}
-                        {DAYS.map((d) => {
-                          return [1, 2, 3, 4, 5].map((p) => {
-                            const key = `${cls}_${d.key}_${p}`;
-                            const entry = scheduleData[key];
-                            const matchedSub = entry ? Object.values(SUBJECT_NAME_MAP).find((s) => s.standardName.toLowerCase() === entry.subject.toLowerCase()) : null;
-
-                            return (
-                              <td
-                                key={`${d.key}_${p}`}
-                                className={`p-1 border-l text-[11px] min-w-[70px] h-12 align-middle ${
-                                  p === 1 ? 'border-slate-800 print:border-black' : 'border-slate-800/40 print:border-black'
-                                }`}
+                    {DAYS.map((d) => (
+                      <React.Fragment key={d.key}>
+                        {[1, 2, 3, 4, 5].map((period, pIdx) => (
+                          <tr key={`${d.key}_${period}`} className="hover:bg-slate-800/40 transition-colors h-14">
+                            {/* CỘT THỨ (Gộp 5 dòng cho mỗi Thứ) */}
+                            {pIdx === 0 && (
+                              <td 
+                                rowSpan={5}
+                                className="p-2 text-center font-black text-xs text-brand-300 print:text-black bg-slate-950 print:bg-slate-100 border-r border-slate-800 print:border-black sticky left-0 z-20 min-w-[85px] shadow-xl align-middle"
                               >
-                                {entry ? (
-                                  <div
-                                    className="w-full h-full rounded-lg p-1 flex flex-col justify-center items-center text-white print:text-black shadow-xs transition-all hover:scale-105"
-                                    style={{
-                                      backgroundColor: matchedSub ? `${matchedSub.color}25` : '#3b82f625',
-                                      borderLeft: `3px solid ${matchedSub ? matchedSub.color : '#3b82f6'}`,
-                                    }}
-                                  >
-                                    <strong
-                                      className="text-[11px] font-bold truncate max-w-full print:text-black leading-tight"
-                                      style={{ color: matchedSub ? matchedSub.color : '#60a5fa' }}
-                                    >
-                                      {entry.subject}
-                                    </strong>
-                                    <span className="text-[10px] text-slate-300 print:text-gray-700 truncate max-w-full leading-tight mt-0.5 font-medium">
-                                      {entry.teacher.replace(/^Cô |^Thầy /i, '')}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-800 print:text-transparent">-</span>
-                                )}
+                                <div className="flex flex-col items-center justify-center gap-1">
+                                  <span className="text-sm font-black uppercase text-white print:text-black tracking-wider">{d.label}</span>
+                                  <span className="text-[10px] text-slate-400 font-medium">(5 Tiết)</span>
+                                </div>
                               </td>
-                            );
-                          });
-                        })}
-                      </tr>
+                            )}
+
+                            {/* CỘT TIẾT (Tiết 1 đến 5) */}
+                            <td 
+                              className="p-2 text-center font-mono font-bold text-slate-300 print:text-black bg-slate-900/95 print:bg-transparent border-r-2 border-brand-500 print:border-black sticky left-[85px] z-20 min-w-[70px] shadow-xl"
+                            >
+                              Tiết {period}
+                            </td>
+
+                            {/* CÁC Ô MÔN HỌC & GIÁO VIÊN CỦA TỪNG LỚP */}
+                            {filteredClassList.map((cls) => {
+                              const key = `${cls}_${d.key}_${period}`;
+                              const entry = scheduleData[key];
+                              const matchedSub = entry ? Object.values(SUBJECT_NAME_MAP).find((s) => s.standardName.toLowerCase() === entry.subject.toLowerCase()) : null;
+
+                              return (
+                                <td 
+                                  key={cls}
+                                  className="p-1 border-l border-slate-800 print:border-black min-w-[125px] h-14 align-middle"
+                                >
+                                  {entry ? (
+                                    <div
+                                      className="w-full h-full rounded-xl p-1.5 flex flex-col justify-center items-center text-white print:text-black shadow-xs transition-all hover:scale-105"
+                                      style={{
+                                        backgroundColor: matchedSub ? `${matchedSub.color}25` : '#3b82f625',
+                                        borderLeft: `4px solid ${matchedSub ? matchedSub.color : '#3b82f6'}`,
+                                      }}
+                                    >
+                                      <strong
+                                        className="text-xs font-bold truncate max-w-full print:text-black leading-tight"
+                                        style={{ color: matchedSub ? matchedSub.color : '#60a5fa' }}
+                                      >
+                                        {entry.subject}
+                                      </strong>
+                                      <span className="text-[11px] text-slate-300 print:text-gray-700 truncate max-w-full leading-tight mt-0.5 font-medium">
+                                        {entry.teacher.replace(/^Cô |^Thầy /i, '')}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-800 print:text-transparent">-</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
