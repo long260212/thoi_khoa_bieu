@@ -56,4 +56,9 @@
     color: black !important;
     background: transparent !important;
   }
+
+  .page-break {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
 }

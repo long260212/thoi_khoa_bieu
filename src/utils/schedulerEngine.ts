@@ -1,7 +1,7 @@
 import { ParsedTeachingUnit } from './assignmentParser';
 
 export const DAYS_LIST = ['THU_2', 'THU_3', 'THU_4', 'THU_5', 'THU_6', 'THU_7'];
-export const PERIODS_LIST = [1, 2, 3, 4, 5]; // 5 tiết buổi sáng / buổi chiều
+export const PERIODS_LIST = [1, 2, 3, 4, 5]; // 5 tiết mỗi buổi
 
 export interface ScheduleResultEntry {
   subject: string;
@@ -21,19 +21,14 @@ export function autoScheduleAllClasses(
   const schedule: Record<string, ScheduleResultEntry> = {};
 
   // Occupancy trackers for O(1) collision detection
-  // teacherOccupancy[teacherName][day_period] = true
   const teacherOccupancy: Record<string, Set<string>> = {};
-  // classOccupancy[className][day_period] = true
   const classOccupancy: Record<string, Set<string>> = {};
-  // classSubjectDayCount[className_subjectName_day] = number
   const classSubjectDayCount: Record<string, number> = {};
 
   const getSlotKey = (day: string, p: number) => `${day}_${p}`;
   const getScheduleKey = (cls: string, day: string, p: number) => `${cls}_${day}_${p}`;
 
-  // 1. Auto-assign Fixed Slots for every class:
-  // - Chào Cờ: Thứ 2, Tiết 1
-  // - Sinh Hoạt Lớp: Thứ 7, Tiết 5
+  // 1. Cố định Chào Cờ (Thứ 2 Tiết 1) và Sinh Hoạt Lớp (Thứ 7 Tiết 5) cho tất cả các lớp
   classList.forEach((cls) => {
     // Chào cờ
     const ccKey = getScheduleKey(cls, 'THU_2', 1);
@@ -47,7 +42,7 @@ export function autoScheduleAllClasses(
     classOccupancy[cls].add(getSlotKey('THU_7', 5));
   });
 
-  // 2. Break teaching assignments into individual 1-period teaching units
+  // 2. Chuyển đổi các phân công thành các tiết học đơn lẻ
   interface IndividualPeriod {
     teacherName: string;
     subjectName: string;
@@ -57,7 +52,7 @@ export function autoScheduleAllClasses(
   }
 
   const units: IndividualPeriod[] = [];
-  let totalRequested = classList.length * 2; // Including Chào cờ & SHL
+  let totalRequested = classList.length * 2; // Gồm Chào cờ & SHL
 
   assignments.forEach((asn) => {
     totalRequested += asn.periodsPerWeek;
@@ -72,10 +67,10 @@ export function autoScheduleAllClasses(
     }
   });
 
-  // Sort units: Prioritize high-demand subjects (Toán, Văn, KHTN, Anh) first
+  // Sắp xếp ưu tiên môn nhiều tiết trước (Toán, Văn, KHTN, Anh)
   units.sort((a, b) => b.totalPeriods - a.totalPeriods);
 
-  // Available slots pool (Mon-Sat, Periods 1-5)
+  // Danh sách tất cả 30 ô trong tuần (6 ngày x 5 tiết)
   const allSlots: { day: string; period: number }[] = [];
   DAYS_LIST.forEach((day) => {
     PERIODS_LIST.forEach((p) => {
@@ -83,15 +78,15 @@ export function autoScheduleAllClasses(
     });
   });
 
-  // Backtracking / Greedy Heuristic Placement
+  const unplacedUnits: IndividualPeriod[] = [];
+
+  // Pass 1: Xếp với ràng buộc phân bổ đều môn trong tuần
   units.forEach((unit) => {
     const { teacherName, subjectName, className } = unit;
 
     if (!classOccupancy[className]) classOccupancy[className] = new Set();
     if (!teacherOccupancy[teacherName]) teacherOccupancy[teacherName] = new Set();
 
-    // Find best conflict-free slot
-    // Score slots based on even spread across days
     type ScoredSlot = { day: string; period: number; score: number };
     const candidates: ScoredSlot[] = [];
 
@@ -99,13 +94,13 @@ export function autoScheduleAllClasses(
       const slotKey = getSlotKey(day, period);
       const schedKey = getScheduleKey(className, day, period);
 
-      // 1. Class must be free
+      // 1. Lớp phải trống
       if (classOccupancy[className].has(slotKey) || schedule[schedKey]) return;
 
-      // 2. Teacher must be free
+      // 2. Giáo viên phải trống
       if (teacherOccupancy[teacherName].has(slotKey)) return;
 
-      // 3. Check subject count on this day for this class (max 2 periods per day for Math/Literature, max 1 for others)
+      // 3. Giới hạn số tiết của môn trong ngày
       const csdKey = `${className}_${subjectName}_${day}`;
       const countToday = classSubjectDayCount[csdKey] || 0;
       const isMain = ['toán', 'văn', 'ngữ văn', 'khtn', 'tiếng anh'].includes(subjectName.toLowerCase());
@@ -113,15 +108,13 @@ export function autoScheduleAllClasses(
 
       if (countToday >= maxPerDay) return;
 
-      // Calculate score
       let score = 100;
-      if (countToday === 0) score += 30; // Prefer new days to spread evenly
+      if (countToday === 0) score += 30; // Ưu tiên ngày chưa có môn này
 
       candidates.push({ day, period, score });
     });
 
     if (candidates.length > 0) {
-      // Pick best candidate slot
       candidates.sort((a, b) => b.score - a.score);
       const chosen = candidates[0];
 
@@ -138,6 +131,29 @@ export function autoScheduleAllClasses(
 
       const csdKey = `${className}_${subjectName}_${chosen.day}`;
       classSubjectDayCount[csdKey] = (classSubjectDayCount[csdKey] || 0) + 1;
+    } else {
+      unplacedUnits.push(unit);
+    }
+  });
+
+  // Pass 2: Xếp vét các tiết còn lại (nới lỏng giới hạn số tiết/ngày nhưng TUYỆT ĐỐI không trùng GV và trùng Lớp)
+  unplacedUnits.forEach((unit) => {
+    const { teacherName, subjectName, className } = unit;
+
+    for (const { day, period } of allSlots) {
+      const slotKey = getSlotKey(day, period);
+      const schedKey = getScheduleKey(className, day, period);
+
+      if (!classOccupancy[className].has(slotKey) && !teacherOccupancy[teacherName].has(slotKey) && !schedule[schedKey]) {
+        schedule[schedKey] = {
+          subject: subjectName,
+          teacher: teacherName,
+        };
+
+        classOccupancy[className].add(slotKey);
+        teacherOccupancy[teacherName].add(slotKey);
+        break;
+      }
     }
   });
 
