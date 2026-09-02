@@ -21,6 +21,8 @@ import * as XLSX from 'xlsx';
 import { PHAN_BOI_CHAU_DATA, PhanBoiChauTeacherData } from './utils/phanBoiChauData';
 import { getPhanBoiChauAssignments, parseTeachingExpression, ParsedTeachingUnit, SUBJECT_NAME_MAP } from './utils/assignmentParser';
 import { autoScheduleAllClasses, ScheduleResultEntry } from './utils/schedulerEngine';
+import { MultiSourceImportModal } from './components/ImportCenter/MultiSourceImportModal';
+import { downloadSampleExcelTemplate } from './utils/multiSourceImporter';
 
 // Ngày trong tuần
 const DAYS = [
@@ -47,6 +49,7 @@ export const App: React.FC = () => {
   // Danh sách phân công chuyên môn
   const [teacherAssignmentsList, setTeacherAssignmentsList] = useState<PhanBoiChauTeacherData[]>(PHAN_BOI_CHAU_DATA);
   const [pastedText, setPastedText] = useState('');
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Danh sách Lớp học và Giáo viên
   const [classList, setClassList] = useState<string[]>([]);
@@ -253,6 +256,14 @@ export const App: React.FC = () => {
           {/* Cụm nút hành động chính */}
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-brand-300 hover:text-white text-xs font-bold rounded-xl border border-brand-500/40 flex items-center gap-1.5 shadow transition-all"
+            >
+              <Upload className="w-4 h-4 text-brand-400" />
+              <span>📥 Nhập Đa Nguồn (Excel, Dán...)</span>
+            </button>
+
+            <button
               onClick={handleRunAutoScheduler}
               className="px-4 py-2 bg-gradient-to-r from-brand-500 via-indigo-600 to-purple-600 hover:from-brand-400 hover:to-purple-500 text-white text-xs font-black rounded-xl shadow-lg shadow-brand-500/30 hover:scale-[1.02] flex items-center gap-2 transition-all animate-pulse"
             >
@@ -361,13 +372,30 @@ export const App: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setIsImportModalOpen(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold shadow flex items-center gap-1.5 transition-all"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Tải File Excel / Dán Bảng</span>
+                  </button>
+
+                  <button
+                    onClick={downloadSampleExcelTemplate}
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-all"
+                    title="Tải file Excel mẫu để điền"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Tải File Mẫu Excel</span>
+                  </button>
+
                   <button
                     onClick={handleReloadPhanBoiChauData}
-                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-all"
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-all"
                   >
                     <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Nạp Lại Mẫu Chuẩn Phan Bội Châu</span>
+                    <span>Nạp Mẫu THCS Phan Bội Châu</span>
                   </button>
 
                   <button
@@ -827,6 +855,16 @@ export const App: React.FC = () => {
         )}
 
       </main>
+
+      {/* MODAL TRUNG TÂM NHẬP ĐA NGUỒN (EXCEL, CLIPBOARD, MẪU) */}
+      <MultiSourceImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImportSuccess={(newTeachers) => {
+          setTeacherAssignmentsList(newTeachers);
+          alert(`✅ Đã nạp thành công ${newTeachers.length} giáo viên vào hệ thống! Bạn có thể bấm "⚡ TỰ ĐỘNG SẮP XẾP TKB" để tạo thời khóa biểu ngay.`);
+        }}
+      />
     </div>
   );
 };
