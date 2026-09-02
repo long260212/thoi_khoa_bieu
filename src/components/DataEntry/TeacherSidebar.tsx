@@ -153,9 +153,21 @@ export const TeacherSidebar: React.FC<TeacherSidebarProps> = ({ onAddNewTeacher 
         className="flex-1 overflow-y-auto overflow-x-hidden relative divide-y divide-slate-800/40 select-none"
       >
         {filteredTeachers.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 text-xs">
-            <UserX className="w-8 h-8 mx-auto mb-2 opacity-40" />
-            <p>Không tìm thấy giáo viên nào</p>
+          <div className="p-6 text-center text-slate-500 text-xs flex flex-col items-center justify-center h-64 gap-2">
+            <UserX className="w-10 h-10 opacity-30 text-slate-400" />
+            <p className="font-semibold text-slate-300">Chưa có giáo viên nào</p>
+            <p className="text-[11px] text-slate-500 max-w-[200px]">
+              Bạn có thể tự thêm giáo viên mới hoặc nạp dữ liệu mẫu để thử nghiệm.
+            </p>
+            {onAddNewTeacher && (
+              <button
+                onClick={onAddNewTeacher}
+                className="mt-2 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Thêm Giáo Viên</span>
+              </button>
+            )}
           </div>
         ) : (
           <div

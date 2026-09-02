@@ -24,7 +24,7 @@ export const App: React.FC = () => {
             <TeacherSidebar onAddNewTeacher={() => setIsMasterDataOpen(true)} />
 
             {/* Right Excel-like Data Grid with Keyboard navigation */}
-            <VirtualizedDataGrid />
+            <VirtualizedDataGrid onOpenMasterData={() => setIsMasterDataOpen(true)} />
           </div>
         ) : (
           /* Timetable Views: Class, Teacher, or Master Matrix */

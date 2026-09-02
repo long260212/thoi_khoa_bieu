@@ -18,7 +18,11 @@ import { Badge } from '../common/Badge';
 import { ExcelPasteModal } from './ExcelPasteModal';
 import { parseExcelClipboard } from '../../utils/excelParser';
 
-export const VirtualizedDataGrid: React.FC = () => {
+interface VirtualizedDataGridProps {
+  onOpenMasterData?: () => void;
+}
+
+export const VirtualizedDataGrid: React.FC<VirtualizedDataGridProps> = ({ onOpenMasterData }) => {
   const selectedTeacherId = useScheduleStore((state) => state.selectedTeacherId);
   const setSelectedTeacher = useScheduleStore((state) => state.setSelectedTeacher);
   const teachers = useScheduleStore((state) => state.teachers);
@@ -31,6 +35,7 @@ export const VirtualizedDataGrid: React.FC = () => {
   const clearTeacherAssignments = useScheduleStore((state) => state.clearTeacherAssignments);
   const stickyDefaultSubjectId = useScheduleStore((state) => state.stickyDefaultSubjectId);
   const setStickyDefaultSubject = useScheduleStore((state) => state.setStickyDefaultSubject);
+  const loadMockData = useScheduleStore((state) => state.loadMockData);
 
   const [isExcelPasteModalOpen, setIsExcelPasteModalOpen] = useState(false);
   const [newRowFocusKey, setNewRowFocusKey] = useState<number>(0);
@@ -140,9 +145,33 @@ export const VirtualizedDataGrid: React.FC = () => {
 
   if (!currentTeacher) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8">
-        <Layers className="w-12 h-12 mb-3 opacity-30" />
-        <p className="text-sm font-medium">Vui lòng chọn một giáo viên ở thanh bên trái để nhập phân công.</p>
+      <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8 space-y-4">
+        <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-brand-400 shadow-xl">
+          <Layers className="w-8 h-8 opacity-60" />
+        </div>
+        <div className="text-center space-y-1 max-w-sm">
+          <h3 className="text-sm font-bold text-white">Chưa chọn giáo viên để nhập phân công</h3>
+          <p className="text-xs text-slate-400">
+            Hãy bắt đầu bằng cách thêm danh sách giáo viên & lớp học của trường, hoặc nạp bộ dữ liệu mẫu thử nghiệm.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {onOpenMasterData && (
+            <button
+              onClick={onOpenMasterData}
+              className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-lg shadow-brand-600/30 flex items-center gap-1.5 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Quản Lý Danh Mục (Thêm GV/Lớp)</span>
+            </button>
+          )}
+          <button
+            onClick={() => loadMockData(100)}
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs border border-slate-700 flex items-center gap-1.5 transition-all"
+          >
+            <span>✨ Nạp Dữ Liệu Mẫu (100+ GV)</span>
+          </button>
+        </div>
       </div>
     );
   }

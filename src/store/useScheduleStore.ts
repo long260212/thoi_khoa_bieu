@@ -69,20 +69,17 @@ export type ScheduleStore = NormalizedTimetableState & ScheduleStoreActions;
 // Web worker reference outside store
 let schedulerWorker: Worker | null = null;
 
-const initialTeachers = generateMockTeachers(100);
-const initialClasses = generateMockClasses();
-const initialAssignments = generateMockAssignments(initialTeachers, initialClasses, INITIAL_SUBJECTS);
-const initialSelectedTeacherId = Object.keys(initialTeachers)[0] || null;
-
+// Initial state starts completely clean (Empty slate)
+// Users can add their own teachers/classes or click "Nạp Dữ Liệu Mẫu" to test
 export const useScheduleStore = create<ScheduleStore>((set, get) => ({
-  teachers: initialTeachers,
-  classes: initialClasses,
-  subjects: INITIAL_SUBJECTS,
-  assignments: initialAssignments,
+  teachers: {},
+  classes: {},
+  subjects: INITIAL_SUBJECTS, // Keep standard Vietnamese subject catalog
+  assignments: {},
   schedule: {},
   
-  selectedTeacherId: initialSelectedTeacherId,
-  selectedClassId: Object.keys(initialClasses)[0] || null,
+  selectedTeacherId: null,
+  selectedClassId: null,
   activeView: 'DATA_ENTRY',
   searchTeacherQuery: '',
   sidebarFilter: 'ALL',
