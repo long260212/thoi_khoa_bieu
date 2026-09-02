@@ -42,11 +42,14 @@ const DAYS = [
 export const App: React.FC = () => {
   // Chế độ xem:
   // 'MASTER_ALL_CLASSES': Tờ Thời Khóa Biểu Toàn Trường (Tất cả các lớp - Mặc định)
-  // 'TIMETABLE_CLASS': Xem chi tiết từng lớp
-  // 'TIMETABLE_TEACHER': Lịch giảng dạy từng giáo viên
+  // Chế độ xem:
+  // 'MASTER_ALL_CLASSES': Tờ Thời Khóa Biểu Toàn Trường (Tất cả các lớp - Mặc định)
+  // 'TIMETABLE_TEACHER': Tờ Thời Khóa Biểu Riêng Của Từng Giáo Viên (Tách biệt hoàn toàn)
+  // 'BATCH_PRINT_TEACHER': In đồng loạt toàn bộ tờ TKB của 56 Giáo viên
+  // 'TIMETABLE_CLASS': Xem chi tiết từng lớp lẻ
   // 'BATCH_PRINT': Chế độ in đồng loạt 32 lớp
   // 'ASSIGNMENTS': Bảng phân công chuyên môn
-  const [activeTab, setActiveTab] = useState<'MASTER_ALL_CLASSES' | 'TIMETABLE_CLASS' | 'TIMETABLE_TEACHER' | 'BATCH_PRINT' | 'ASSIGNMENTS'>('MASTER_ALL_CLASSES');
+  const [activeTab, setActiveTab] = useState<'MASTER_ALL_CLASSES' | 'TIMETABLE_TEACHER' | 'BATCH_PRINT_TEACHER' | 'TIMETABLE_CLASS' | 'BATCH_PRINT' | 'ASSIGNMENTS'>('MASTER_ALL_CLASSES');
 
   // Bộ lọc khối lớp trong bảng toàn trường
   const [selectedGradeFilter, setSelectedGradeFilter] = useState<'ALL' | '6' | '7' | '8' | '9'>('ALL');
@@ -66,11 +69,28 @@ export const App: React.FC = () => {
   const [classList, setClassList] = useState<string[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>('6A1');
   const [selectedTeacher, setSelectedTeacher] = useState<string>('Tạ Thanh Thủy');
+  const [teacherSearchKeyword, setTeacherSearchKeyword] = useState('');
 
   // Dữ liệu Thời Khóa Biểu: key dạng `${className}_${day}_${period}` -> { subject, teacher }
   const [scheduleData, setScheduleData] = useState<Record<string, ScheduleResultEntry>>({});
   const [isScheduled, setIsScheduled] = useState(false);
   const [schedulingStats, setSchedulingStats] = useState<{ total: number; time: number } | null>(null);
+
+  // Map tra cứu lịch giảng dạy của từng giáo viên O(1): teacherName -> Record<`${day}_${period}`, { className, subject }>
+  const teacherScheduleMap = useMemo(() => {
+    const map: Record<string, Record<string, { className: string; subject: string }>> = {};
+    Object.entries(scheduleData).forEach(([key, entry]) => {
+      if (!entry || !entry.teacher) return;
+      const parts = key.split('_');
+      const period = parts.pop();
+      const day = parts.pop();
+      const cls = parts.join('_');
+      const tName = entry.teacher.trim().toLowerCase();
+      if (!map[tName]) map[tName] = {};
+      map[tName][`${day}_${period}`] = { className: cls, subject: entry.subject };
+    });
+    return map;
+  }, [scheduleData]);
 
   // Tham chiếu và state cho chức năng Kéo chuột cuộn 2 chiều (Mouse 2D Drag-to-Scroll)
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -269,6 +289,73 @@ export const App: React.FC = () => {
     XLSX.writeFile(wb, `ThoiKhoaBieu_ToanTruong_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
+  // Xuất Tờ Thời Khóa Biểu Riêng Của Giáo Viên Sang File Excel (.xlsx)
+  const handleExportSingleTeacherExcel = (teacherName: string) => {
+    const wb = XLSX.utils.book_new();
+    const rows: any[] = [];
+    rows.push([schoolName.toUpperCase()]);
+    rows.push([`THỜI KHÓA BIỂU CÁ NHÂN GIÁO VIÊN: ${teacherName.toUpperCase()}`]);
+    rows.push([schoolYear]);
+    rows.push([]);
+
+    // Header: Tiết, Thứ Hai -> Thứ Bảy
+    rows.push(['Tiết / Buổi', ...DAYS.map((d) => d.label)]);
+
+    [1, 2, 3, 4, 5].forEach((period) => {
+      const row = [`Tiết ${period}`];
+      DAYS.forEach((d) => {
+        const item = teacherScheduleMap[teacherName.toLowerCase()]?.[`${d.key}_${period}`];
+        if (item) {
+          row.push(`${item.subject} (Lớp ${item.className})`);
+        } else {
+          row.push('-');
+        }
+      });
+      rows.push(row);
+    });
+
+    const info = teacherAssignmentsList.find(t => t.name.toLowerCase() === teacherName.toLowerCase());
+    rows.push([]);
+    rows.push(['Thông tin chuyên môn:', `Chức vụ: ${info?.duty || 'Giáo viên'}`, `Định mức: ${info?.quota || 19} tiết/tuần`]);
+    rows.push(['Tổng số tiết dạy trong tuần:', Object.keys(teacherScheduleMap[teacherName.toLowerCase()] || {}).length]);
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, `TKB_${teacherName.replace(/\s+/g, '_').slice(0, 25)}`);
+    XLSX.writeFile(wb, `TKB_GiaoVien_${teacherName.replace(/\s+/g, '_')}.xlsx`);
+  };
+
+  // Xuất Toàn Bộ Thời Khóa Biểu 56 Giáo Viên Ra 1 File Excel (Tổng hợp từng giáo viên)
+  const handleExportAllTeachersExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const masterTeacherRows: any[] = [];
+    masterTeacherRows.push([schoolName.toUpperCase()]);
+    masterTeacherRows.push(['THỜI KHÓA BIỂU TỔNG HỢP TOÀN BỘ GIÁO VIÊN']);
+    masterTeacherRows.push([schoolYear]);
+    masterTeacherRows.push([]);
+
+    const header = ['STT', 'Họ và tên Giáo viên', 'Chức vụ', 'Định mức', 'Số tiết dạy'];
+    DAYS.forEach(d => {
+      [1, 2, 3, 4, 5].forEach(p => header.push(`${d.short} T${p}`));
+    });
+    masterTeacherRows.push(header);
+
+    teacherAssignmentsList.forEach((t, idx) => {
+      const tSched = teacherScheduleMap[t.name.toLowerCase()] || {};
+      const row = [idx + 1, t.name, t.duty || 'GV', t.quota, Object.keys(tSched).length];
+      DAYS.forEach(d => {
+        [1, 2, 3, 4, 5].forEach(p => {
+          const item = tSched[`${d.key}_${p}`];
+          row.push(item ? `${item.subject} (${item.className})` : '');
+        });
+      });
+      masterTeacherRows.push(row);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(masterTeacherRows);
+    XLSX.utils.book_append_sheet(wb, ws, 'TKB_Tat_Ca_Giao_Vien');
+    XLSX.writeFile(wb, `TKB_ToanBo_GiaoVien_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-brand-500 selection:text-white">
       {/* 1. HEADER THANH ĐIỀU HƯỚNG CHÍNH */}
@@ -325,9 +412,9 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* THANH TAB CHỨC NĂNG */}
+        {/* THANH TAB CHỨC NĂNG CHÍNH */}
         <div className="max-w-7xl mx-auto mt-3 pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
-          <nav className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
+          <nav className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
             <button
               onClick={() => setActiveTab('MASTER_ALL_CLASSES')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
@@ -340,30 +427,7 @@ export const App: React.FC = () => {
               <span>1. Tờ TKB Toàn Trường (Tất Cả Các Lớp)</span>
             </button>
 
-            <button
-              onClick={() => setActiveTab('TIMETABLE_CLASS')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
-                activeTab === 'TIMETABLE_CLASS'
-                  ? 'bg-brand-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <GraduationCap className="w-3.5 h-3.5" />
-              <span>2. Xem & In Từng Lớp Lẻ</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('BATCH_PRINT')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
-                activeTab === 'BATCH_PRINT'
-                  ? 'bg-purple-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>3. In Đồng Loạt {classList.length} Tờ TKB Lớp (A4)</span>
-            </button>
-
+            {/* TAB 2: TỜ TKB RIÊNG TỪNG GIÁO VIÊN (TÁCH BIỆT HOÀN TOÀN) */}
             <button
               onClick={() => setActiveTab('TIMETABLE_TEACHER')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
@@ -373,9 +437,49 @@ export const App: React.FC = () => {
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>4. Lịch Giảng Dạy Giáo Viên</span>
+              <span>2. ⭐ TKB Riêng Cho Giáo Viên (Tách Biệt)</span>
             </button>
 
+            {/* TAB 3: IN ĐỒNG LOẠT TOÀN BỘ 56 GIÁO VIÊN */}
+            <button
+              onClick={() => setActiveTab('BATCH_PRINT_TEACHER')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
+                activeTab === 'BATCH_PRINT_TEACHER'
+                  ? 'bg-teal-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>3. In TKB 56 Giáo Viên (A4 Rời)</span>
+            </button>
+
+            {/* TAB 4: XEM & IN TỪNG LỚP LẺ */}
+            <button
+              onClick={() => setActiveTab('TIMETABLE_CLASS')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
+                activeTab === 'TIMETABLE_CLASS'
+                  ? 'bg-brand-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span>4. Xem TKB Từng Lớp Lẻ</span>
+            </button>
+
+            {/* TAB 5: IN ĐỒNG LOẠT 32 LỚP */}
+            <button
+              onClick={() => setActiveTab('BATCH_PRINT')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
+                activeTab === 'BATCH_PRINT'
+                  ? 'bg-purple-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>5. In Đồng Loạt {classList.length} Lớp (A4)</span>
+            </button>
+
+            {/* TAB 6: PHÂN CÔNG CHUYÊN MÔN */}
             <button
               onClick={() => setActiveTab('ASSIGNMENTS')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
@@ -385,7 +489,7 @@ export const App: React.FC = () => {
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>5. Bảng Phân Công ({teacherAssignmentsList.length} GV)</span>
+              <span>6. Phân Công ({teacherAssignmentsList.length} GV)</span>
             </button>
           </nav>
 
@@ -912,104 +1016,369 @@ export const App: React.FC = () => {
         )}
 
         {/* ========================================================================================= */}
-        {/* TAB 4: LỊCH GIẢNG DẠY CỦA GIÁO VIÊN                                                       */}
+        {/* TAB 2: TỜ THỜI KHÓA BIỂU RIÊNG TỪNG GIÁO VIÊN (TÁCH BIỆT HOÀN TOÀN)                       */}
         {/* ========================================================================================= */}
-        {activeTab === 'TIMETABLE_TEACHER' && (
-          <div className="space-y-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-3 no-print">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-300 flex items-center gap-1">
-                  <Users className="w-4 h-4 text-indigo-400" />
-                  <span>Chọn Giáo Viên:</span>
-                </span>
-                <select
-                  value={selectedTeacher}
-                  onChange={(e) => setSelectedTeacher(e.target.value)}
-                  className="px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
-                >
-                  {teacherAssignmentsList.map((t) => (
-                    <option key={t.name} value={t.name}>
-                      {t.name} ({t.duty || 'GV'})
-                    </option>
-                  ))}
-                </select>
-              </div>
+        {activeTab === 'TIMETABLE_TEACHER' && (() => {
+          const currentTeacherInfo = teacherAssignmentsList.find(t => t.name.toLowerCase() === selectedTeacher.toLowerCase()) || {
+            name: selectedTeacher,
+            duty: 'Giáo viên',
+            quota: 19,
+            rawTeachingText: '',
+            stt: 0,
+          };
 
-              <button
-                onClick={handlePrint}
-                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow flex items-center gap-1.5 transition-all"
-              >
-                <Printer className="w-4 h-4" />
-                <span>In Lịch Giảng Dạy</span>
-              </button>
-            </div>
+          const tSched = teacherScheduleMap[selectedTeacher.toLowerCase()] || {};
+          const totalPeriods = Object.keys(tSched).length;
 
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6 print:bg-white print:text-black print:border-none print:shadow-none print:p-0">
-              <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800 print:border-b-2 print:border-black">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-400 uppercase">{schoolName}</h3>
-                  <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2 print:text-black mt-1">
-                    LỊCH GIẢNG DẠY: <span className="text-indigo-400 print:text-black">{selectedTeacher}</span>
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-0.5">{schoolYear}</p>
+          // Lấy danh sách các lớp dạy của giáo viên này
+          const distinctClasses = Array.from(new Set(Object.values(tSched).map(v => v.className))).sort();
+
+          // Lọc danh sách giáo viên theo từ khóa tìm kiếm
+          const filteredTeachers = teacherAssignmentsList.filter(t => 
+            t.name.toLowerCase().includes(teacherSearchKeyword.toLowerCase()) ||
+            (t.duty && t.duty.toLowerCase().includes(teacherSearchKeyword.toLowerCase())) ||
+            t.rawTeachingText.toLowerCase().includes(teacherSearchKeyword.toLowerCase())
+          );
+
+          return (
+            <div className="space-y-6">
+              {/* THANH ĐIỀU HƯỚNG VÀ CHỌN GIÁO VIÊN */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-3 no-print">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300">
+                    <Users className="w-4 h-4 text-indigo-400" />
+                    <span>Chọn Giáo Viên:</span>
+                  </div>
+
+                  {/* Ô tìm kiếm nhanh tên giáo viên */}
+                  <input
+                    type="text"
+                    placeholder="🔍 Gõ tên GV để tìm..."
+                    value={teacherSearchKeyword}
+                    onChange={(e) => setTeacherSearchKeyword(e.target.value)}
+                    className="px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-44"
+                  />
+
+                  {/* Dropdown danh sách 56 giáo viên */}
+                  <select
+                    value={selectedTeacher}
+                    onChange={(e) => setSelectedTeacher(e.target.value)}
+                    className="px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-indigo-500 max-w-xs"
+                  >
+                    {filteredTeachers.map((t) => (
+                      <option key={t.name} value={t.name}>
+                        {t.stt}. {t.name} ({t.duty || 'GV'} - {t.quota} tiết)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Các nút hành động riêng cho giáo viên */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => handleExportSingleTeacherExcel(selectedTeacher)}
+                    className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow flex items-center gap-1.5 transition-all"
+                    title="Tải riêng file Excel thời khóa biểu của thầy cô này"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    <span>Tải Excel TKB Thầy/Cô</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('BATCH_PRINT_TEACHER')}
+                    className="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-600 text-white text-xs font-bold rounded-xl shadow flex items-center gap-1.5 transition-all"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>In TKB 56 GV (A4 Rời)</span>
+                  </button>
+
+                  <button
+                    onClick={handlePrint}
+                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 transition-all"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>In Tờ TKB Cá Nhân (A4)</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-slate-800 print:border-2 print:border-black">
-                <table className="w-full text-center border-collapse text-xs print:text-black">
-                  <thead>
-                    <tr className="bg-slate-950 print:bg-slate-100 border-b border-slate-800 print:border-b-2 print:border-black">
-                      <th className="p-3 font-bold text-slate-400 print:text-black uppercase w-28 text-left pl-4">Tiết / Buổi</th>
-                      {DAYS.map((d) => (
-                        <th key={d.key} className="p-3 font-bold text-slate-200 print:text-black border-l border-slate-800 print:border-black text-sm">
-                          {d.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[1, 2, 3, 4, 5].map((period) => (
-                      <tr key={period} className="border-b border-slate-800 print:border-black hover:bg-slate-800/20 transition-colors">
-                        <td className="p-3 font-mono font-bold text-slate-400 print:text-black text-left pl-4 bg-slate-950/40 print:bg-transparent">
-                          Tiết {period}
-                        </td>
-                        {DAYS.map((d) => {
-                          let matchedClass = '';
-                          let matchedSubject = '';
+              {/* THẺ THÔNG TIN HỒ SƠ GIẢNG DẠY CỦA GIÁO VIÊN */}
+              <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-900/50 rounded-2xl p-5 shadow-xl flex flex-wrap items-center justify-between gap-4 no-print">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white text-xl font-black shadow-lg shadow-indigo-500/30">
+                    {selectedTeacher.split(' ').slice(-1)[0][0]}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-black text-white">{selectedTeacher}</h2>
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                        {currentTeacherInfo.duty || 'Giáo viên'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Phân công: <strong className="text-slate-200">{currentTeacherInfo.rawTeachingText}</strong>
+                    </p>
+                  </div>
+                </div>
 
-                          for (const key of Object.keys(scheduleData)) {
-                            if (key.endsWith(`_${d.key}_${period}`)) {
-                              const entry = scheduleData[key];
-                              if (entry && entry.teacher.toLowerCase() === selectedTeacher.toLowerCase()) {
-                                matchedClass = key.replace(`_${d.key}_${period}`, '');
-                                matchedSubject = entry.subject;
-                                break;
-                              }
-                            }
-                          }
+                <div className="flex items-center gap-4">
+                  <div className="bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Định mức quy định</span>
+                    <span className="text-lg font-black text-indigo-400">{currentTeacherInfo.quota} tiết/tuần</span>
+                  </div>
 
-                          return (
-                            <td key={d.key} className="p-2 border-l border-slate-800 print:border-black min-w-[130px] h-16 align-middle">
-                              {matchedClass ? (
-                                <div className="h-full rounded-xl p-2 bg-indigo-950/60 border-l-4 border-indigo-500 text-white print:text-black flex flex-col justify-center items-center">
-                                  <strong className="font-bold text-xs text-indigo-300 print:text-black">
-                                    Lớp {matchedClass}
-                                  </strong>
-                                  <span className="text-[11px] text-slate-300 print:text-gray-700">
-                                    {matchedSubject}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-slate-700 print:text-transparent">-</span>
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  <div className="bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Đã xếp trong TKB</span>
+                    <span className="text-lg font-black text-emerald-400">{totalPeriods} tiết ({Math.round((totalPeriods / (currentTeacherInfo.quota || 1)) * 100)}%)</span>
+                  </div>
+
+                  <div className="bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Số lớp giảng dạy</span>
+                    <span className="text-lg font-black text-purple-400">{distinctClasses.length} lớp ({distinctClasses.join(', ')})</span>
+                  </div>
+                </div>
               </div>
+
+              {/* TỜ THỜI KHÓA BIỂU CÁ NHÂN GIÁO VIÊN (CHUẨN KHỔ A4 BỘ GIÁO DỤC & ĐÀO TẠO) */}
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6 print:bg-white print:text-black print:border-none print:shadow-none print:p-0">
+                {/* Header Văn Bản Chuẩn Quốc Hiệu & Tiêu Ngữ */}
+                <div className="border-b-2 border-slate-800 print:border-black pb-4">
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <p className="text-xs font-bold uppercase text-slate-400 print:text-black">UBND PHƯỜNG BẢO LỘC</p>
+                      <p className="text-xs font-black uppercase text-brand-400 print:text-black">{schoolName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase text-slate-300 print:text-black">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+                      <p className="text-xs italic text-slate-400 print:text-black">Độc lập - Tự do - Hạnh phúc</p>
+                    </div>
+                  </div>
+
+                  <div className="text-center mt-4">
+                    <h2 className="text-2xl font-black text-white tracking-tight uppercase print:text-black">
+                      THỜI KHÓA BIỂU CÁ NHÂN GIÁO VIÊN
+                    </h2>
+                    <p className="text-sm font-bold text-indigo-400 print:text-black mt-1">
+                      Giáo viên: <span className="underline underline-offset-4 uppercase">{selectedTeacher}</span> • Chức vụ: {currentTeacherInfo.duty || 'Giáo viên'} • Định mức: {currentTeacherInfo.quota} tiết/tuần
+                    </p>
+                    <p className="text-xs text-slate-400 print:text-black mt-0.5">{schoolYear}</p>
+                  </div>
+                </div>
+
+                {/* MA TRẬN LỊCH GIẢNG DẠY CỦA GIÁO VIÊN */}
+                <div className="overflow-x-auto rounded-2xl border-2 border-slate-800 print:border-2 print:border-black">
+                  <table className="w-full text-center border-collapse text-xs print:text-black">
+                    <thead>
+                      <tr className="bg-slate-950 print:bg-slate-100 border-b-2 border-slate-800 print:border-b-2 print:border-black">
+                        <th className="p-3.5 font-black text-slate-200 print:text-black uppercase w-28 text-center bg-slate-950 print:bg-slate-200">
+                          Tiết / Buổi
+                        </th>
+                        {DAYS.map((d) => (
+                          <th key={d.key} className="p-3.5 font-black text-slate-200 print:text-black border-l border-slate-800 print:border-black text-sm uppercase">
+                            {d.label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800 print:divide-black">
+                      {[1, 2, 3, 4, 5].map((period) => (
+                        <tr key={period} className="hover:bg-slate-800/30 transition-colors h-16">
+                          <td className="p-3 font-mono font-bold text-slate-300 print:text-black text-center bg-slate-950/80 print:bg-transparent border-r border-slate-800 print:border-black">
+                            Tiết {period}
+                          </td>
+                          {DAYS.map((d) => {
+                            const item = tSched[`${d.key}_${period}`];
+                            const matchedSub = item ? Object.values(SUBJECT_NAME_MAP).find((s) => s.standardName.toLowerCase() === item.subject.toLowerCase()) : null;
+
+                            return (
+                              <td key={d.key} className="p-2 border-l border-slate-800 print:border-black min-w-[135px] align-middle">
+                                {item ? (
+                                  <div
+                                    className="w-full h-full rounded-xl p-2 text-white print:text-black flex flex-col justify-center items-center shadow-md transition-all hover:scale-105"
+                                    style={{
+                                      backgroundColor: matchedSub ? `${matchedSub.color}25` : '#6366f125',
+                                      borderLeft: `4px solid ${matchedSub ? matchedSub.color : '#6366f1'}`,
+                                      borderRight: `1px solid ${matchedSub ? `${matchedSub.color}40` : '#6366f140'}`,
+                                    }}
+                                  >
+                                    <strong className="text-xs font-black truncate max-w-full leading-tight" style={{ color: matchedSub ? matchedSub.color : '#818cf8' }}>
+                                      {item.subject}
+                                    </strong>
+                                    <span className="text-xs font-bold text-white print:text-black bg-slate-900/80 print:bg-slate-200 px-2 py-0.5 rounded-md mt-1">
+                                      Lớp {item.className}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-700 print:text-gray-300 italic text-[11px]">-</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* THỐNG KÊ TIẾT DẠY & CHỮ KÝ 3 BÊN */}
+                <div className="pt-4 flex flex-wrap items-center justify-between text-xs text-slate-400 print:text-black border-t border-slate-800 print:border-black">
+                  <div>
+                    <p>• Tổng số tiết đã bố trí: <strong className="text-white print:text-black font-bold">{totalPeriods} tiết</strong> (Định mức: {currentTeacherInfo.quota} tiết/tuần)</p>
+                    <p>• Các lớp đảm nhận: <strong className="text-white print:text-black font-bold">{distinctClasses.join(', ')}</strong></p>
+                  </div>
+                  <div className="italic text-slate-500 print:text-black">
+                    Thời khóa biểu áp dụng từ ngày 07 tháng 09 năm 2026
+                  </div>
+                </div>
+
+                {/* KHUNG KÝ TÊN DUYỆT 3 BÊN CHUẨN A4 */}
+                <div className="grid grid-cols-3 pt-6 text-center text-xs print:text-black">
+                  <div>
+                    <p className="font-bold uppercase text-slate-300 print:text-black">NGƯỜI LẬP BIỂU</p>
+                    <p className="italic text-slate-500 print:text-gray-600 mt-0.5">(Ký và ghi rõ họ tên)</p>
+                  </div>
+                  <div>
+                    <p className="font-bold uppercase text-slate-300 print:text-black">GIÁO VIÊN KÝ NHẬN</p>
+                    <p className="italic text-slate-500 print:text-gray-600 mt-0.5">(Ký và ghi rõ họ tên)</p>
+                    <p className="font-bold text-white print:text-black mt-12">{selectedTeacher}</p>
+                  </div>
+                  <div>
+                    <p className="font-bold uppercase text-slate-300 print:text-black">HIỆU TRƯỞNG DUYỆT</p>
+                    <p className="italic text-slate-500 print:text-gray-600 mt-0.5">(Ký tên và đóng dấu)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ========================================================================================= */}
+        {/* TAB 3: IN ĐỒNG LOẠT TOÀN BỘ 56 TỜ TKB GIÁO VIÊN (MỖI GV 1 TRANG A4 RỜI LIÊN TỤC)          */}
+        {/* ========================================================================================= */}
+        {activeTab === 'BATCH_PRINT_TEACHER' && (
+          <div className="space-y-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-3 no-print">
+              <div>
+                <h3 className="text-sm font-bold text-white">Chế Độ In Đồng Loạt {teacherAssignmentsList.length} Tờ TKB Giáo Viên</h3>
+                <p className="text-xs text-slate-400">
+                  Hệ thống tự động tách trang A4 riêng biệt cho từng thầy cô để in phát trước năm học mới.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportAllTeachersExcel}
+                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow flex items-center gap-1.5 transition-all"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>Xuất Excel Tất Cả GV</span>
+                </button>
+
+                <button
+                  onClick={handlePrint}
+                  className="px-5 py-2 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl shadow-lg flex items-center gap-2"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>BẤM VÀO ĐÂY ĐỂ IN 56 TRANG A4</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Danh sách 56 tờ TKB cá nhân với ngắt trang print */}
+            <div className="space-y-8 print:space-y-0">
+              {teacherAssignmentsList.map((t, idx) => {
+                const tSched = teacherScheduleMap[t.name.toLowerCase()] || {};
+                const total = Object.keys(tSched).length;
+
+                return (
+                  <div
+                    key={t.name}
+                    className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6 print:bg-white print:text-black print:border-none print:shadow-none print:p-0 page-break"
+                  >
+                    {/* Header Văn Bản */}
+                    <div className="border-b-2 border-slate-800 print:border-black pb-3">
+                      <div className="grid grid-cols-2 gap-4 text-center">
+                        <div>
+                          <p className="text-xs font-bold uppercase text-slate-400 print:text-black">UBND PHƯỜNG BẢO LỘC</p>
+                          <p className="text-xs font-black uppercase text-brand-400 print:text-black">{schoolName}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold uppercase text-slate-300 print:text-black">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+                          <p className="text-xs italic text-slate-400 print:text-black">Độc lập - Tự do - Hạnh phúc</p>
+                        </div>
+                      </div>
+
+                      <div className="text-center mt-3">
+                        <h2 className="text-xl font-black text-white tracking-tight uppercase print:text-black">
+                          THỜI KHÓA BIỂU CÁ NHÂN GIÁO VIÊN ({idx + 1}/{teacherAssignmentsList.length})
+                        </h2>
+                        <p className="text-sm font-bold text-teal-400 print:text-black mt-0.5">
+                          Thầy / Cô: <span className="underline uppercase">{t.name}</span> • Chức vụ: {t.duty || 'GV'} • Định mức: {t.quota} tiết/tuần
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Ma trận bảng */}
+                    <table className="w-full text-center border-collapse text-xs print:text-black border border-slate-800 print:border-black">
+                      <thead>
+                        <tr className="bg-slate-950 print:bg-slate-100 border-b border-slate-800 print:border-black">
+                          <th className="p-2 font-black text-slate-300 print:text-black w-24">Tiết / Buổi</th>
+                          {DAYS.map((d) => (
+                            <th key={d.key} className="p-2 font-bold text-slate-200 print:text-black border-l border-slate-800 print:border-black">
+                              {d.label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800 print:divide-black">
+                        {[1, 2, 3, 4, 5].map((period) => (
+                          <tr key={period} className="h-14">
+                            <td className="p-2 font-mono font-bold text-slate-400 print:text-black text-center bg-slate-950/40 print:bg-transparent border-r border-slate-800 print:border-black">
+                              Tiết {period}
+                            </td>
+                            {DAYS.map((d) => {
+                              const item = tSched[`${d.key}_${period}`];
+                              return (
+                                <td key={d.key} className="p-1 border-l border-slate-800 print:border-black">
+                                  {item ? (
+                                    <div className="text-center">
+                                      <strong className="block font-bold text-xs text-indigo-300 print:text-black">{item.subject}</strong>
+                                      <span className="text-[11px] text-slate-300 print:text-gray-700 font-bold">Lớp {item.className}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-700 print:text-gray-300">-</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    <div className="pt-2 flex justify-between text-xs text-slate-400 print:text-black">
+                      <p>Tổng số tiết: <strong>{total} tiết</strong> ({t.rawTeachingText})</p>
+                      <p className="italic">Năm học 2026 - 2027</p>
+                    </div>
+
+                    <div className="grid grid-cols-3 pt-6 text-center text-xs print:text-black">
+                      <div>
+                        <p className="font-bold uppercase">NGƯỜI LẬP BIỂU</p>
+                        <p className="italic text-gray-500">(Ký, họ tên)</p>
+                      </div>
+                      <div>
+                        <p className="font-bold uppercase">GIÁO VIÊN KÝ NHẬN</p>
+                        <p className="italic text-gray-500">(Ký, họ tên)</p>
+                        <p className="font-bold mt-10">{t.name}</p>
+                      </div>
+                      <div>
+                        <p className="font-bold uppercase">HIỆU TRƯỞNG DUYỆT</p>
+                        <p className="italic text-gray-500">(Ký, đóng dấu)</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
