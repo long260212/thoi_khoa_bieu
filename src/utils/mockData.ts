@@ -1,41 +1,41 @@
 import { Assignment, ClassItem, SubjectItem, Teacher } from '../types/state';
 
+// Danh mục môn học chuẩn Chương trình Giáo dục Phổ thông 2018 cấp Tiểu học (Khối 1 - 5)
 export const INITIAL_SUBJECTS: Record<string, SubjectItem> = {
-  SUB_TOAN: { id: 'SUB_TOAN', code: 'TOAN', name: 'Toán Học', color: '#2563eb', textColor: '#ffffff', category: 'MAIN', maxPerDay: 2, consecutiveAllowed: true },
-  SUB_VAN: { id: 'SUB_VAN', code: 'VAN', name: 'Ngữ Văn', color: '#e11d48', textColor: '#ffffff', category: 'MAIN', maxPerDay: 2, consecutiveAllowed: true },
+  SUB_TV: { id: 'SUB_TV', code: 'TV', name: 'Tiếng Việt', color: '#e11d48', textColor: '#ffffff', category: 'MAIN', maxPerDay: 2, consecutiveAllowed: true },
+  SUB_TOAN: { id: 'SUB_TOAN', code: 'TOAN', name: 'Toán', color: '#2563eb', textColor: '#ffffff', category: 'MAIN', maxPerDay: 2, consecutiveAllowed: false },
   SUB_ENG: { id: 'SUB_ENG', code: 'ENG', name: 'Tiếng Anh', color: '#059669', textColor: '#ffffff', category: 'MAIN', maxPerDay: 2, consecutiveAllowed: false },
-  SUB_LY: { id: 'SUB_LY', code: 'LY', name: 'Vật Lý', color: '#4f46e5', textColor: '#ffffff', category: 'MAIN', maxPerDay: 2, consecutiveAllowed: true },
-  SUB_HOA: { id: 'SUB_HOA', code: 'HOA', name: 'Hóa Học', color: '#ea580c', textColor: '#ffffff', category: 'MAIN', maxPerDay: 2, consecutiveAllowed: true },
-  SUB_SINH: { id: 'SUB_SINH', code: 'SINH', name: 'Sinh Học', color: '#65a30d', textColor: '#ffffff', category: 'MAIN', maxPerDay: 2, consecutiveAllowed: false },
-  SUB_SU: { id: 'SUB_SU', code: 'SU', name: 'Lịch Sử', color: '#d97706', textColor: '#ffffff', category: 'SUB', maxPerDay: 1, consecutiveAllowed: false },
-  SUB_DIA: { id: 'SUB_DIA', code: 'DIA', name: 'Địa Lý', color: '#ca8a04', textColor: '#ffffff', category: 'SUB', maxPerDay: 1, consecutiveAllowed: false },
-  SUB_TIN: { id: 'SUB_TIN', code: 'TIN', name: 'Tin Học', color: '#9333ea', textColor: '#ffffff', category: 'SUB', maxPerDay: 2, consecutiveAllowed: true },
-  SUB_GDTC: { id: 'SUB_GDTC', code: 'GDTC', name: 'GD Thể Chất', color: '#0d9488', textColor: '#ffffff', category: 'SUB', maxPerDay: 2, consecutiveAllowed: true },
-  SUB_GDCD: { id: 'SUB_GDCD', code: 'GDCD', name: 'GD Công Dân', color: '#db2777', textColor: '#ffffff', category: 'SUB', maxPerDay: 1, consecutiveAllowed: false },
-  SUB_CONGNGHE: { id: 'SUB_CN', code: 'CN', name: 'Công Nghệ', color: '#0284c7', textColor: '#ffffff', category: 'SUB', maxPerDay: 1, consecutiveAllowed: false },
+  SUB_TNXH: { id: 'SUB_TNXH', code: 'TNXH', name: 'Tự Nhiên & Xã Hội', color: '#0891b2', textColor: '#ffffff', category: 'MAIN', maxPerDay: 1, consecutiveAllowed: false },
+  SUB_KH: { id: 'SUB_KH', code: 'KH', name: 'Khoa Học', color: '#65a30d', textColor: '#ffffff', category: 'MAIN', maxPerDay: 1, consecutiveAllowed: false },
+  SUB_LSDL: { id: 'SUB_LSDL', code: 'LSDL', name: 'Lịch Sử & Địa Lí', color: '#d97706', textColor: '#ffffff', category: 'MAIN', maxPerDay: 1, consecutiveAllowed: false },
+  SUB_TINCN: { id: 'SUB_TINCN', code: 'TINCN', name: 'Tin Học & Công Nghệ', color: '#9333ea', textColor: '#ffffff', category: 'SUB', maxPerDay: 1, consecutiveAllowed: false },
+  SUB_DAODUC: { id: 'SUB_DD', code: 'DD', name: 'Đạo Đức', color: '#db2777', textColor: '#ffffff', category: 'SUB', maxPerDay: 1, consecutiveAllowed: false },
+  SUB_GDTC: { id: 'SUB_GDTC', code: 'GDTC', name: 'Giáo Dục Thể Chất', color: '#0d9488', textColor: '#ffffff', category: 'SUB', maxPerDay: 1, consecutiveAllowed: false },
   SUB_AMNHAC: { id: 'SUB_AN', code: 'AN', name: 'Âm Nhạc', color: '#7c3aed', textColor: '#ffffff', category: 'ACTIVITY', maxPerDay: 1, consecutiveAllowed: false },
-  SUB_MYTHUAT: { id: 'SUB_MT', code: 'MT', name: 'Mỹ Thuật', color: '#c026d3', textColor: '#ffffff', category: 'ACTIVITY', maxPerDay: 1, consecutiveAllowed: false },
+  SUB_MYTHUAT: { id: 'SUB_MT', code: 'MT', name: 'Mĩ Thuật', color: '#c026d3', textColor: '#ffffff', category: 'ACTIVITY', maxPerDay: 1, consecutiveAllowed: false },
+  SUB_HDTN: { id: 'SUB_HDTN', code: 'HDTN', name: 'Hoạt Động Trải Nghiệm', color: '#0284c7', textColor: '#ffffff', category: 'ACTIVITY', maxPerDay: 1, consecutiveAllowed: false },
   SUB_SHDC: { id: 'SUB_SHDC', code: 'SHDC', name: 'Chào Cờ / SHDC', color: '#475569', textColor: '#ffffff', category: 'ACTIVITY', maxPerDay: 1, consecutiveAllowed: false },
   SUB_SHL: { id: 'SUB_SHL', code: 'SHL', name: 'Sinh Hoạt Lớp', color: '#334155', textColor: '#ffffff', category: 'ACTIVITY', maxPerDay: 1, consecutiveAllowed: false },
 };
 
-// Generate 50 classes (e.g. 6A1-6A10, 7A1-7A10, 8A1-8A10, 9A1-9A10, 10A1-10A10)
+// Tạo danh sách lớp học Tiểu học (Chỉ từ Khối 1 đến Khối 5)
 export function generateMockClasses(): Record<string, ClassItem> {
   const classes: Record<string, ClassItem> = {};
-  const grades = [6, 7, 8, 9, 10];
+  const grades = [1, 2, 3, 4, 5]; // Chỉ cấp 1: Lớp 1 - 5
   
   grades.forEach((grade) => {
-    // 8 classes per grade = 40 classes
-    for (let i = 1; i <= 8; i++) {
+    // 6 lớp mỗi khối = 30 lớp tiểu học
+    for (let i = 1; i <= 6; i++) {
       const code = `${grade}A${i}`;
       const id = `CLS_${code}`;
-      const isMorning = grade === 9 || grade === 10 || (grade === 8 && i <= 4);
+      // Khối 1, 2, 5 học sáng, khối 3, 4 học chiều (hoặc cả ngày)
+      const isMorning = grade === 1 || grade === 2 || grade === 5;
       classes[id] = {
         id,
         code,
         grade,
         shift: isMorning ? 'MORNING' : 'AFTERNOON',
-        room: `P.${grade}0${i}`,
+        room: `P.T${grade}0${i}`,
       };
     }
   });
@@ -43,24 +43,25 @@ export function generateMockClasses(): Record<string, ClassItem> {
   return classes;
 }
 
-// Generate 100+ Teachers with realistic Vietnamese names
+// Danh sách họ và tên giáo viên Việt Nam
 const VIET_LAST_NAMES = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý'];
-const VIET_MIDDLE_NAMES = ['Văn', 'Thị', 'Đức', 'Hữu', 'Minh', 'Ngọc', 'Quốc', 'Thanh', 'Hải', 'Xuân', 'Kim', 'Bảo', 'Gia', 'Anh'];
-const VIET_FIRST_NAMES = ['Hùng', 'Loan', 'Mai', 'Đức', 'Anh', 'Trang', 'Hà', 'Nam', 'Tuấn', 'Linh', 'Dũng', 'Phương', 'Hương', 'Cường', 'Yến', 'Lan', 'Bình', 'Thảo', 'Hiếu', 'Khoa', 'Tâm', 'Vy', 'Châu', 'Phong'];
+const VIET_MIDDLE_NAMES = ['Thị', 'Văn', 'Ngọc', 'Thanh', 'Mai', 'Thu', 'Hải', 'Xuân', 'Kim', 'Bảo', 'Gia', 'Minh', 'Hồng', 'Hương'];
+const VIET_FIRST_NAMES = ['Loan', 'Mai', 'Hà', 'Hương', 'Trang', 'Linh', 'Phương', 'Yến', 'Lan', 'Thảo', 'Vy', 'Huyền', 'Tuyết', 'Nga', 'Hạnh', 'Dung', 'Oanh', 'Bình', 'Hùng', 'Đức', 'Cường', 'Dũng', 'Tuấn'];
 
-export function generateMockTeachers(count: number = 105): Record<string, Teacher> {
+export function generateMockTeachers(count: number = 50): Record<string, Teacher> {
   const teachers: Record<string, Teacher> = {};
   
-  // Base core known teachers
+  // Giáo viên tiểu học mẫu
   const sampleTeachers: Partial<Teacher>[] = [
-    { code: 'CTLoan', name: 'Cô Trần Thị Loan', maxPeriodsPerWeek: 18 },
-    { code: 'NVHung', name: 'Thầy Nguyễn Văn Hùng', maxPeriodsPerWeek: 19 },
-    { code: 'LTMai', name: 'Cô Lê Thị Mai', maxPeriodsPerWeek: 16 },
-    { code: 'PMDuc', name: 'Thầy Phạm Minh Đức', maxPeriodsPerWeek: 21 }, // intentional overload for test demo
-    { code: 'HNAnh', name: 'Cô Hoàng Ngọc Anh', maxPeriodsPerWeek: 17 },
-    { code: 'VQDung', name: 'Thầy Vũ Quốc Dũng', maxPeriodsPerWeek: 19 },
-    { code: 'DTTTrang', name: 'Cô Đặng Thu Trang', maxPeriodsPerWeek: 18 },
-    { code: 'BHHai', name: 'Thầy Bùi Hoàng Hải', maxPeriodsPerWeek: 19 },
+    { code: 'GV01_Loan', name: 'Cô Trần Thị Loan (GVCN 1A1)', maxPeriodsPerWeek: 23 },
+    { code: 'GV02_Mai', name: 'Cô Lê Thị Mai (GVCN 2A1)', maxPeriodsPerWeek: 23 },
+    { code: 'GV03_Hung', name: 'Thầy Nguyễn Văn Hùng (GVCN 3A1)', maxPeriodsPerWeek: 23 },
+    { code: 'GV04_Trang', name: 'Cô Đặng Thu Trang (GVCN 4A1)', maxPeriodsPerWeek: 23 },
+    { code: 'GV05_Duc', name: 'Thầy Phạm Minh Đức (GV Thể Dục)', maxPeriodsPerWeek: 23 },
+    { code: 'GV06_Anh', name: 'Cô Hoàng Ngọc Anh (GV Tiếng Anh)', maxPeriodsPerWeek: 22 },
+    { code: 'GV07_Linh', name: 'Cô Vũ Thùy Linh (GV Âm Nhạc)', maxPeriodsPerWeek: 20 },
+    { code: 'GV08_Dung', name: 'Cô Bùi Mỹ Dung (GV Mĩ Thuật)', maxPeriodsPerWeek: 20 },
+    { code: 'GV09_Hai', name: 'Thầy Bùi Hoàng Hải (GV Tin Học)', maxPeriodsPerWeek: 22 },
   ];
 
   sampleTeachers.forEach((t, idx) => {
@@ -69,35 +70,34 @@ export function generateMockTeachers(count: number = 105): Record<string, Teache
       id,
       code: t.code!,
       name: t.name!,
-      email: `${t.code?.toLowerCase()}@truonghoc.edu.vn`,
+      email: `${t.code?.toLowerCase()}@tieuhoc.edu.vn`,
       phone: `098${Math.floor(1000000 + Math.random() * 9000000)}`,
-      maxPeriodsPerWeek: 19,
+      maxPeriodsPerWeek: t.maxPeriodsPerWeek || 23, // Chuẩn Tiểu học: 23 tiết/tuần
       maxPeriodsPerDay: 4,
       unavailableSlots: idx === 0 ? ['THU_7_4', 'THU_7_5'] : [],
     };
   });
 
-  // Generate remaining teachers up to count
+  // Tạo các giáo viên tiếp theo
   for (let i = sampleTeachers.length + 1; i <= count; i++) {
     const lastName = VIET_LAST_NAMES[i % VIET_LAST_NAMES.length];
     const midName = VIET_MIDDLE_NAMES[(i * 3) % VIET_MIDDLE_NAMES.length];
     const firstName = VIET_FIRST_NAMES[(i * 7) % VIET_FIRST_NAMES.length];
-    const isFemale = midName === 'Thị' || ['Loan', 'Mai', 'Trang', 'Hà', 'Linh', 'Phương', 'Hương', 'Yến', 'Lan', 'Thảo', 'Vy'].includes(firstName);
+    const isFemale = midName === 'Thị' || !['Hùng', 'Đức', 'Cường', 'Dũng', 'Tuấn'].includes(firstName);
     const title = isFemale ? 'Cô' : 'Thầy';
     const fullName = `${title} ${lastName} ${midName} ${firstName}`;
     
-    // Code like "GV09", "NTLan09"
     const initials = `${lastName[0]}${midName[0]}${firstName}`;
-    const code = `${initials}${i < 10 ? '0' + i : i}`;
+    const code = `GV${i < 10 ? '0' + i : i}_${initials}`;
     const id = `TEA_${code}`;
 
     teachers[id] = {
       id,
       code,
       name: fullName,
-      email: `${code.toLowerCase()}@truonghoc.edu.vn`,
+      email: `${code.toLowerCase()}@tieuhoc.edu.vn`,
       phone: `09${Math.floor(10000000 + Math.random() * 90000000)}`,
-      maxPeriodsPerWeek: 19,
+      maxPeriodsPerWeek: 23, // Chuẩn Tiểu học
       maxPeriodsPerDay: 4,
     };
   }
@@ -105,7 +105,7 @@ export function generateMockTeachers(count: number = 105): Record<string, Teache
   return teachers;
 }
 
-// Generate realistic teaching assignments matching teachers to classes and subjects
+// Phân công giảng dạy chuẩn Tiểu học
 export function generateMockAssignments(
   teachers: Record<string, Teacher>,
   classes: Record<string, ClassItem>,
@@ -117,139 +117,164 @@ export function generateMockAssignments(
 
   if (teacherList.length === 0 || classList.length === 0) return assignments;
 
-  // Distribute core assignments for sample teachers first
-  const firstTeacher = teacherList.find(t => t.code === 'CTLoan') || teacherList[0];
-  const secondTeacher = teacherList.find(t => t.code === 'NVHung') || teacherList[1];
-  const thirdTeacher = teacherList.find(t => t.code === 'LTMai') || teacherList[2];
-  const fourthTeacher = teacherList.find(t => t.code === 'PMDuc') || teacherList[3]; // Overloaded demo
-
   let assignCounter = 1;
+  let gvIndex = 0;
 
-  // CTLoan (Toán): 3A5 (4t), 8A1 (4t), 8A2 (4t), 9A1 (4t) = 16 periods
-  if (firstTeacher) {
-    const targetClasses = classList.slice(0, 4);
-    targetClasses.forEach((cls) => {
-      const id = `ASN_${assignCounter++}`;
-      assignments[id] = {
-        id,
-        teacherId: firstTeacher.id,
-        classId: cls.id,
-        subjectId: 'SUB_TOAN',
-        periodsPerWeek: 4,
-      };
-    });
-  }
-
-  // NVHung (Văn): 6A1 (4t), 6A2 (4t), 7A1 (4t), 7A2 (4t), 8A1 (3t) = 19 periods (Standard capacity)
-  if (secondTeacher) {
-    const targetClasses = classList.slice(2, 7);
-    targetClasses.forEach((cls, idx) => {
-      const id = `ASN_${assignCounter++}`;
-      assignments[id] = {
-        id,
-        teacherId: secondTeacher.id,
-        classId: cls.id,
-        subjectId: 'SUB_VAN',
-        periodsPerWeek: idx === 4 ? 3 : 4,
-      };
-    });
-  }
-
-  // LTMai (Tiếng Anh): 6A1 (3t), 6A2 (3t), 8A1 (3t), 8A2 (3t), 9A1 (3t) = 15 periods
-  if (thirdTeacher) {
-    const targetClasses = [classList[0], classList[1], classList[4], classList[5], classList[8]].filter(Boolean);
-    targetClasses.forEach((cls) => {
-      const id = `ASN_${assignCounter++}`;
-      assignments[id] = {
-        id,
-        teacherId: thirdTeacher.id,
-        classId: cls.id,
-        subjectId: 'SUB_ENG',
-        periodsPerWeek: 3,
-      };
-    });
-  }
-
-  // PMDuc (Overloaded > 19 periods: 22 periods to demo capacity warning alert)
-  if (fourthTeacher) {
-    const targetClasses = classList.slice(6, 12);
-    targetClasses.forEach((cls, idx) => {
-      const id = `ASN_${assignCounter++}`;
-      assignments[id] = {
-        id,
-        teacherId: fourthTeacher.id,
-        classId: cls.id,
-        subjectId: 'SUB_LY',
-        periodsPerWeek: idx < 4 ? 4 : 3, // 4*4 + 3*2 = 22 periods (>19 WARNING!)
-      };
-    });
-  }
-
-  // Generate assignments for other teachers to cover all classes
-  const subjectKeys = Object.keys(subjects).filter(k => !['SUB_SHDC', 'SUB_SHL'].includes(k));
-  let teacherIndex = 4;
-
+  // Với cấp Tiểu học: Mỗi lớp có 1 Giáo viên Chủ nhiệm dạy các môn cơ bản (Tiếng Việt, Toán, Đạo Đức, TNXH/KH/LSDL, HĐTN, SHDC, SHL)
+  // Các giáo viên bộ môn dạy: Tiếng Anh, Tin học, Âm nhạc, Mĩ thuật, Thể dục.
   classList.forEach((cls) => {
-    // Each class has ~28-30 periods a week
-    // Fixed Flag salute / Homeroom (Chào cờ & Sinh hoạt lớp)
-    const homeroomTeacher = teacherList[teacherIndex % teacherList.length];
-    
-    // Assign Chào cờ
+    const gvcn = teacherList[gvIndex % teacherList.length];
+    gvIndex++;
+
+    // 1. Tiếng Việt (8-10 tiết / tuần)
+    const tvPeriods = cls.grade <= 2 ? 10 : 8;
+    const tvId = `ASN_${assignCounter++}`;
+    assignments[tvId] = {
+      id: tvId,
+      teacherId: gvcn.id,
+      classId: cls.id,
+      subjectId: 'SUB_TV',
+      periodsPerWeek: tvPeriods,
+    };
+
+    // 2. Toán (4-5 tiết / tuần)
+    const toanId = `ASN_${assignCounter++}`;
+    assignments[toanId] = {
+      id: toanId,
+      teacherId: gvcn.id,
+      classId: cls.id,
+      subjectId: 'SUB_TOAN',
+      periodsPerWeek: 5,
+    };
+
+    // 3. Đạo Đức (1 tiết)
+    const ddId = `ASN_${assignCounter++}`;
+    assignments[ddId] = {
+      id: ddId,
+      teacherId: gvcn.id,
+      classId: cls.id,
+      subjectId: 'SUB_DAODUC',
+      periodsPerWeek: 1,
+    };
+
+    // 4. Môn Khoa học xã hội theo khối
+    if (cls.grade <= 3) {
+      // Tự nhiên và Xã hội (2 tiết)
+      const tnxhId = `ASN_${assignCounter++}`;
+      assignments[tnxhId] = {
+        id: tnxhId,
+        teacherId: gvcn.id,
+        classId: cls.id,
+        subjectId: 'SUB_TNXH',
+        periodsPerWeek: 2,
+      };
+    } else {
+      // Khoa Học (2 tiết) & Lịch Sử - Địa Lí (2 tiết)
+      const khId = `ASN_${assignCounter++}`;
+      assignments[khId] = {
+        id: khId,
+        teacherId: gvcn.id,
+        classId: cls.id,
+        subjectId: 'SUB_KH',
+        periodsPerWeek: 2,
+      };
+
+      const lsdlId = `ASN_${assignCounter++}`;
+      assignments[lsdlId] = {
+        id: lsdlId,
+        teacherId: gvcn.id,
+        classId: cls.id,
+        subjectId: 'SUB_LSDL',
+        periodsPerWeek: 2,
+      };
+    }
+
+    // 5. Chào Cờ (1 tiết) & Sinh Hoạt Lớp (1 tiết)
     const shdcId = `ASN_${assignCounter++}`;
     assignments[shdcId] = {
       id: shdcId,
-      teacherId: homeroomTeacher.id,
+      teacherId: gvcn.id,
       classId: cls.id,
       subjectId: 'SUB_SHDC',
       periodsPerWeek: 1,
     };
 
-    // Assign Sinh hoạt lớp
     const shlId = `ASN_${assignCounter++}`;
     assignments[shlId] = {
       id: shlId,
-      teacherId: homeroomTeacher.id,
+      teacherId: gvcn.id,
       classId: cls.id,
       subjectId: 'SUB_SHL',
       periodsPerWeek: 1,
     };
 
-    // Assign subjects
-    const classSubjectPicks = [
-      { sub: 'SUB_TOAN', periods: 4 },
-      { sub: 'SUB_VAN', periods: 4 },
-      { sub: 'SUB_ENG', periods: 3 },
-      { sub: 'SUB_LY', periods: 2 },
-      { sub: 'SUB_HOA', periods: 2 },
-      { sub: 'SUB_SINH', periods: 2 },
-      { sub: 'SUB_SU', periods: 2 },
-      { sub: 'SUB_DIA', periods: 2 },
-      { sub: 'SUB_TIN', periods: 2 },
-      { sub: 'SUB_GDTC', periods: 2 },
-      { sub: 'SUB_GDCD', periods: 1 },
-      { sub: 'SUB_CN', periods: 1 },
-      { sub: 'SUB_AN', periods: 1 },
-      { sub: 'SUB_MT', periods: 1 },
-    ];
+    // 6. Hoạt Động Trải Nghiệm (1 tiết)
+    const hdtnId = `ASN_${assignCounter++}`;
+    assignments[hdtnId] = {
+      id: hdtnId,
+      teacherId: gvcn.id,
+      classId: cls.id,
+      subjectId: 'SUB_HDTN',
+      periodsPerWeek: 1,
+    };
 
-    classSubjectPicks.forEach(({ sub, periods }) => {
-      // Check if already assigned to this class
-      const alreadyAssigned = Object.values(assignments).some(
-        a => a.classId === cls.id && a.subjectId === sub
-      );
+    // 7. Các môn Bộ Môn Chuyên Biệt:
+    // Tiếng Anh (2-4 tiết)
+    const gvEng = teacherList.find(t => t.code.includes('Anh')) || teacherList[(gvIndex + 1) % teacherList.length];
+    const engId = `ASN_${assignCounter++}`;
+    assignments[engId] = {
+      id: engId,
+      teacherId: gvEng.id,
+      classId: cls.id,
+      subjectId: 'SUB_ENG',
+      periodsPerWeek: cls.grade >= 3 ? 4 : 2,
+    };
 
-      if (!alreadyAssigned) {
-        const assignedTeacher = teacherList[(teacherIndex++) % teacherList.length];
-        const id = `ASN_${assignCounter++}`;
-        assignments[id] = {
-          id,
-          teacherId: assignedTeacher.id,
-          classId: cls.id,
-          subjectId: sub,
-          periodsPerWeek: periods,
-        };
-      }
-    });
+    // Giáo Dục Thể Chất (2 tiết)
+    const gvGdtc = teacherList.find(t => t.code.includes('Duc')) || teacherList[(gvIndex + 2) % teacherList.length];
+    const gdtcId = `ASN_${assignCounter++}`;
+    assignments[gdtcId] = {
+      id: gdtcId,
+      teacherId: gvGdtc.id,
+      classId: cls.id,
+      subjectId: 'SUB_GDTC',
+      periodsPerWeek: 2,
+    };
+
+    // Âm Nhạc (1 tiết)
+    const gvAn = teacherList.find(t => t.code.includes('Linh')) || teacherList[(gvIndex + 3) % teacherList.length];
+    const anId = `ASN_${assignCounter++}`;
+    assignments[anId] = {
+      id: anId,
+      teacherId: gvAn.id,
+      classId: cls.id,
+      subjectId: 'SUB_AMNHAC',
+      periodsPerWeek: 1,
+    };
+
+    // Mĩ Thuật (1 tiết)
+    const gvMt = teacherList.find(t => t.code.includes('Dung')) || teacherList[(gvIndex + 4) % teacherList.length];
+    const mtId = `ASN_${assignCounter++}`;
+    assignments[mtId] = {
+      id: mtId,
+      teacherId: gvMt.id,
+      classId: cls.id,
+      subjectId: 'SUB_MYTHUAT',
+      periodsPerWeek: 1,
+    };
+
+    // Tin Học & Công Nghệ (Lớp 3, 4, 5: 2 tiết)
+    if (cls.grade >= 3) {
+      const gvTin = teacherList.find(t => t.code.includes('Hai')) || teacherList[(gvIndex + 5) % teacherList.length];
+      const tinId = `ASN_${assignCounter++}`;
+      assignments[tinId] = {
+        id: tinId,
+        teacherId: gvTin.id,
+        classId: cls.id,
+        subjectId: 'SUB_TINCN',
+        periodsPerWeek: 2,
+      };
+    }
   });
 
   return assignments;

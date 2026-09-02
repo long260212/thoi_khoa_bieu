@@ -26,13 +26,13 @@ export function useTeacherTotalPeriods(teacherId: string | null): number {
 }
 
 /**
- * Check capacity warning status for teacher (Standard: 19 periods/week in Vietnam)
+ * Check capacity warning status for teacher (Standard: 23 periods/week in Vietnam Primary Schools)
  */
 export function useTeacherCapacityStatus(teacherId: string | null) {
   const teacher = useScheduleStore((state) => teacherId ? state.teachers[teacherId] : null);
   const totalPeriods = useTeacherTotalPeriods(teacherId);
 
-  const maxAllowed = teacher?.maxPeriodsPerWeek || 19;
+  const maxAllowed = teacher?.maxPeriodsPerWeek || 23;
   const isOverloaded = totalPeriods > maxAllowed;
   const isAtCapacity = totalPeriods === maxAllowed;
   const isUnderloaded = totalPeriods < maxAllowed - 4;
@@ -47,7 +47,7 @@ export function useTeacherCapacityStatus(teacherId: string | null) {
     statusText: isOverloaded 
       ? `CẢNH BÁO: Vượt định mức (+${totalPeriods - maxAllowed} tiết/tuần)` 
       : isAtCapacity 
-        ? 'Đạt định mức chuẩn (19 tiết/tuần)' 
+        ? `Đạt định mức chuẩn (${maxAllowed} tiết/tuần)` 
         : `Còn trống ${maxAllowed - totalPeriods} tiết`,
   };
 }

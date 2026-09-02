@@ -77,10 +77,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMasterData }) => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
-                EduTimetable <span className="text-xs px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-400 border border-brand-500/30 font-mono">PRO v2.0</span>
+                EduTimetable <span className="text-xs px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-400 border border-brand-500/30 font-mono">TIỂU HỌC</span>
               </h1>
             </div>
-            <p className="text-xs text-slate-400">Xếp Thời Khóa Biểu Tự Động & Phân Công Chuyên Môn</p>
+            <p className="text-xs text-slate-400">Xếp Thời Khóa Biểu Tự Động Cấp 1 (Khối 1 - 5) • Chuẩn GDPT 2018</p>
           </div>
         </div>
 

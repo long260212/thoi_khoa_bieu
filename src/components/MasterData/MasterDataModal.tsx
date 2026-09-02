@@ -40,15 +40,15 @@ export const MasterDataModal: React.FC<MasterDataModalProps> = ({ isOpen, onClos
   // New item form state
   const [newTeacherName, setNewTeacherName] = useState('');
   const [newTeacherCode, setNewTeacherCode] = useState('');
-  const [newTeacherPeriods, setNewTeacherPeriods] = useState(19);
+  const [newTeacherPeriods, setNewTeacherPeriods] = useState(23); // Chuẩn Tiểu học
 
   const [newClassCode, setNewClassCode] = useState('');
-  const [newClassGrade, setNewClassGrade] = useState(8);
+  const [newClassGrade, setNewClassGrade] = useState(1); // Khối 1 đến 5
   const [newClassShift, setNewClassShift] = useState<ShiftType>('MORNING');
 
   const [newSubName, setNewSubName] = useState('');
   const [newSubCode, setNewSubCode] = useState('');
-  const [newSubColor, setNewSubColor] = useState('#3b82f6');
+  const [newSubColor, setNewSubColor] = useState('#2563eb');
   const [newSubMaxDay, setNewSubMaxDay] = useState(2);
 
   if (!isOpen) return null;
@@ -61,7 +61,7 @@ export const MasterDataModal: React.FC<MasterDataModalProps> = ({ isOpen, onClos
       id,
       name: newTeacherName.trim(),
       code: newTeacherCode.trim(),
-      maxPeriodsPerWeek: Number(newTeacherPeriods) || 19,
+      maxPeriodsPerWeek: Number(newTeacherPeriods) || 23,
       maxPeriodsPerDay: 4,
     });
     setNewTeacherName('');
@@ -75,7 +75,7 @@ export const MasterDataModal: React.FC<MasterDataModalProps> = ({ isOpen, onClos
     addClass({
       id,
       code: newClassCode.trim(),
-      grade: Number(newClassGrade) || 8,
+      grade: Number(newClassGrade) || 1,
       shift: newClassShift,
     });
     setNewClassCode('');
@@ -227,20 +227,22 @@ export const MasterDataModal: React.FC<MasterDataModalProps> = ({ isOpen, onClos
               <form onSubmit={handleCreateClass} className="flex gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
                 <input
                   type="text"
-                  placeholder="Tên lớp (VD: 8A1, 10A2)..."
+                  placeholder="Tên lớp (VD: 1A1, 2A3, 3A5, 5A1)..."
                   value={newClassCode}
                   onChange={(e) => setNewClassCode(e.target.value)}
                   className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 flex-1 focus:outline-none"
                 />
-                <input
-                  type="number"
-                  min={1}
-                  max={12}
-                  placeholder="Khối (1-12)..."
+                <select
                   value={newClassGrade}
                   onChange={(e) => setNewClassGrade(Number(e.target.value))}
-                  className="w-24 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 text-center focus:outline-none"
-                />
+                  className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white font-medium focus:outline-none"
+                >
+                  <option value={1}>Khối 1 (Lớp 1)</option>
+                  <option value={2}>Khối 2 (Lớp 2)</option>
+                  <option value={3}>Khối 3 (Lớp 3)</option>
+                  <option value={4}>Khối 4 (Lớp 4)</option>
+                  <option value={5}>Khối 5 (Lớp 5)</option>
+                </select>
                 <select
                   value={newClassShift}
                   onChange={(e) => setNewClassShift(e.target.value as ShiftType)}
