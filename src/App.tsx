@@ -55,6 +55,9 @@ export const App: React.FC = () => {
   const [schoolName, setSchoolName] = useState('TRƯỜNG THCS PHAN BỘI CHÂU');
   const [schoolYear, setSchoolYear] = useState('NĂM HỌC 2026 - 2027 • HỌC KỲ I (ÁP DỤNG TỪ 07/9/2026)');
 
+  // Chế độ giao diện bảng tính (Mặc định là Bảng tính Excel chuẩn giống như hình chụp của người dùng)
+  const [tableTheme, setTableTheme] = useState<'EXCEL_LIGHT' | 'EXCEL_DARK' | 'MODERN_CARDS'>('EXCEL_LIGHT');
+
   // Danh sách phân công chuyên môn
   const [teacherAssignmentsList, setTeacherAssignmentsList] = useState<PhanBoiChauTeacherData[]>(PHAN_BOI_CHAU_DATA);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -480,7 +483,7 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* THANH ĐIỀU HƯỚNG: LỌC KHỐI LỚP & NHẢY NHANH ĐẾN THỨ (ĐẶC BIỆT THỨ 7) */}
+              {/* THANH ĐIỀU HƯỚNG & TÙY CHỈNH CHẾ ĐỘ XEM */}
               <div className="bg-slate-950/90 p-3 rounded-2xl border border-slate-800/80 flex flex-wrap items-center justify-between gap-3 no-print">
                 {/* 1. Lọc theo Khối lớp */}
                 <div className="flex flex-wrap items-center gap-2">
@@ -515,61 +518,104 @@ export const App: React.FC = () => {
                   ))}
                 </div>
 
-                {/* 2. Nhảy nhanh đến từng Ngày (Thứ 2 đến Thứ 7) */}
-                <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-xl border border-slate-700">
-                  <span className="text-xs font-bold text-brand-400 pl-1.5 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>Nhảy Đến Ngày:</span>
-                  </span>
-
-                  {DAYS.map((d) => (
+                {/* 2. Chọn Giao Diện Bảng Tính (Chuẩn Excel Như Hình) */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-700">
                     <button
-                      key={d.key}
-                      onClick={() => scrollToDayVertical(d.key)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                        d.key === 'THU_7'
-                          ? 'bg-amber-600 text-white hover:bg-amber-500 shadow-md font-black animate-pulse'
-                          : 'bg-slate-800 text-slate-300 hover:bg-brand-600 hover:text-white'
+                      onClick={() => setTableTheme('EXCEL_LIGHT')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        tableTheme === 'EXCEL_LIGHT'
+                          ? 'bg-emerald-600 text-white shadow'
+                          : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      {d.label}
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                      <span>Bảng Excel Chuẩn (Như Hình)</span>
                     </button>
-                  ))}
+
+                    <button
+                      onClick={() => setTableTheme('EXCEL_DARK')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        tableTheme === 'EXCEL_DARK'
+                          ? 'bg-slate-800 text-white shadow'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span>Excel Dark Mode</span>
+                    </button>
+
+                    <button
+                      onClick={() => setTableTheme('MODERN_CARDS')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        tableTheme === 'MODERN_CARDS'
+                          ? 'bg-indigo-600 text-white shadow'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span>Thẻ Màu Sắc</span>
+                    </button>
+                  </div>
+
+                  {/* Nút tải File Excel chuẩn */}
+                  <button
+                    onClick={handleExportExcel}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition-all hover:scale-105"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    <span>Tải File Excel Y Hệt Hình (.xlsx)</span>
+                  </button>
                 </div>
               </div>
 
-              {/* BẢNG THỜI KHÓA BIỂU TOÀN TRƯỜNG (CHO PHÉP CUỘN CẢ 2 CHIỀU ĐỂ XEM ĐẦY ĐỦ TỪ THỨ 2 ĐẾN THỨ 7) */}
+              {/* BẢNG THỜI KHÓA BIỂU TOÀN TRƯỜNG CHUẨN MA TRẬN EXCEL (Y HỆT HÌNH ẢNH) */}
               <div 
                 ref={tableContainerRef}
                 onMouseDown={handleMouseDown}
                 onMouseLeave={handleMouseLeave}
                 onMouseUp={handleMouseUp}
                 onMouseMove={handleMouseMove}
-                className={`overflow-auto rounded-2xl border-2 border-slate-800 print:border-2 print:border-black max-h-[82vh] select-none ${
-                  isDragging ? 'cursor-grabbing' : 'cursor-grab'
-                }`}
+                className={`overflow-auto rounded-xl border-2 select-none max-h-[82vh] transition-all ${
+                  tableTheme === 'EXCEL_LIGHT'
+                    ? 'bg-white text-slate-900 border-slate-300 shadow-xl'
+                    : tableTheme === 'EXCEL_DARK'
+                    ? 'bg-slate-950 text-slate-200 border-slate-700 shadow-xl'
+                    : 'bg-slate-900 text-slate-100 border-slate-800 shadow-2xl'
+                } ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 title="Cuộn chuột hoặc click giữ chuột để kéo ngang/dọc xem toàn bộ 32 lớp và từ Thứ 2 đến Thứ 7"
               >
-                <table className="w-full text-center border-collapse text-xs print:text-black">
-                  <thead className="sticky top-0 z-30 bg-slate-950 print:bg-slate-100 border-b-2 border-slate-800 print:border-b-2 print:border-black shadow-md">
+                <table className={`w-full text-left border-collapse ${tableTheme === 'EXCEL_LIGHT' ? 'text-slate-900' : 'text-slate-200'} text-[12px] font-sans`}>
+                  {/* HÀNG TIÊU ĐỀ: Thứ | Tiết | Lớp 6A1 | Lớp 6A2 ... */}
+                  <thead className={`sticky top-0 z-30 font-bold border-b-2 shadow-sm ${
+                    tableTheme === 'EXCEL_LIGHT'
+                      ? 'bg-[#f8fafc] text-slate-800 border-slate-300'
+                      : 'bg-slate-950 text-white border-slate-700'
+                  }`}>
                     <tr>
-                      {/* Cột Thứ cố định góc trái */}
-                      <th 
-                        className="p-3 font-bold text-slate-100 print:text-black uppercase w-24 min-w-[85px] text-center sticky left-0 z-40 bg-slate-950 print:bg-slate-100 border-r border-slate-800 shadow-xl"
-                      >
+                      {/* Cột Thứ cố định */}
+                      <th className={`p-2.5 uppercase w-24 min-w-[90px] text-center sticky left-0 z-40 border-r border-b ${
+                        tableTheme === 'EXCEL_LIGHT'
+                          ? 'bg-[#f1f5f9] text-slate-800 border-slate-300'
+                          : 'bg-slate-900 text-white border-slate-700'
+                      }`}>
                         Thứ
                       </th>
                       {/* Cột Tiết cố định */}
-                      <th 
-                        className="p-3 font-bold text-slate-100 print:text-black uppercase w-20 min-w-[70px] text-center sticky left-[85px] z-40 bg-slate-950 print:bg-slate-100 border-r-2 border-brand-500 shadow-xl"
-                      >
+                      <th className={`p-2.5 uppercase w-20 min-w-[75px] text-center sticky left-[90px] z-40 border-r-2 border-b ${
+                        tableTheme === 'EXCEL_LIGHT'
+                          ? 'bg-[#f1f5f9] text-slate-800 border-slate-300 border-r-emerald-600'
+                          : 'bg-slate-900 text-white border-slate-700 border-r-emerald-500'
+                      }`}>
                         Tiết
                       </th>
-                      {/* CÁC CỘT LỚP HỌC XẾP NẰM NGANG */}
+                      {/* Các cột Lớp học */}
                       {filteredClassList.map((cls) => (
                         <th 
                           key={cls}
-                          className="p-2.5 font-black text-sm text-brand-300 print:text-black border-l border-slate-800 print:border-black min-w-[125px] w-32 bg-slate-950 print:bg-slate-100"
+                          className={`p-2.5 text-center font-bold border-l border-b min-w-[140px] w-40 whitespace-nowrap ${
+                            tableTheme === 'EXCEL_LIGHT'
+                              ? 'bg-[#f8fafc] text-slate-900 border-slate-300'
+                              : 'bg-slate-950 text-brand-300 border-slate-700'
+                          }`}
                         >
                           Lớp {cls}
                         </th>
@@ -577,42 +623,39 @@ export const App: React.FC = () => {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-slate-800/60 print:divide-black font-sans">
+                  {/* THÂN BẢNG: Mỗi dòng chứa Thứ, Tiết và Phân công của từng lớp */}
+                  <tbody>
                     {DAYS.map((d) => (
                       <React.Fragment key={d.key}>
-                        {[1, 2, 3, 4, 5].map((period, pIdx) => (
+                        {[1, 2, 3, 4, 5].map((period) => (
                           <tr 
                             key={`${d.key}_${period}`} 
-                            id={pIdx === 0 ? `day_row_${d.key}` : undefined}
-                            className={`hover:bg-slate-800/40 transition-colors h-14 ${
-                              d.key === 'THU_7' ? 'bg-amber-950/10' : ''
+                            id={period === 1 ? `day_row_${d.key}` : undefined}
+                            className={`transition-colors h-10 ${
+                              tableTheme === 'EXCEL_LIGHT'
+                                ? 'hover:bg-emerald-50/60'
+                                : 'hover:bg-slate-800/60'
                             }`}
                           >
-                            {/* CỘT THỨ (Gộp 5 dòng cho mỗi Thứ) */}
-                            {pIdx === 0 && (
-                              <td 
-                                rowSpan={5}
-                                className={`p-2 text-center font-black text-xs print:text-black border-r border-slate-800 print:border-black sticky left-0 z-20 min-w-[85px] shadow-xl align-middle ${
-                                  d.key === 'THU_7'
-                                    ? 'bg-amber-950 text-amber-300 border-amber-800'
-                                    : 'bg-slate-950 text-brand-300 print:bg-slate-100'
-                                }`}
-                              >
-                                <div className="flex flex-col items-center justify-center gap-1">
-                                  <span className="text-sm font-black uppercase tracking-wider">{d.label}</span>
-                                  <span className="text-[10px] text-slate-400 font-medium">(5 Tiết)</span>
-                                </div>
-                              </td>
-                            )}
+                            {/* CỘT 1: THỨ (Hiển thị đầy đủ tên thứ trên từng dòng như trong Excel) */}
+                            <td className={`p-2 text-center font-semibold border-r border-b min-w-[90px] sticky left-0 z-20 whitespace-nowrap ${
+                              tableTheme === 'EXCEL_LIGHT'
+                                ? 'bg-white text-slate-800 border-slate-300'
+                                : 'bg-slate-950 text-slate-200 border-slate-700'
+                            }`}>
+                              {d.label}
+                            </td>
 
-                            {/* CỘT TIẾT (Tiết 1 đến 5) */}
-                            <td 
-                              className="p-2 text-center font-mono font-bold text-slate-300 print:text-black bg-slate-900/95 print:bg-transparent border-r-2 border-brand-500 print:border-black sticky left-[85px] z-20 min-w-[70px] shadow-xl"
-                            >
+                            {/* CỘT 2: TIẾT (Tiết 1, Tiết 2... Tiết 5) */}
+                            <td className={`p-2 text-center font-medium border-r-2 border-b min-w-[75px] sticky left-[90px] z-20 whitespace-nowrap ${
+                              tableTheme === 'EXCEL_LIGHT'
+                                ? 'bg-white text-slate-800 border-slate-300 border-r-emerald-600'
+                                : 'bg-slate-950 text-slate-200 border-slate-700 border-r-emerald-500'
+                            }`}>
                               Tiết {period}
                             </td>
 
-                            {/* CÁC Ô MÔN HỌC & GIÁO VIÊN CỦA TỪNG LỚP */}
+                            {/* CỘT CÁC LỚP HỌC: Môn Học (Giáo Viên) */}
                             {filteredClassList.map((cls) => {
                               const key = `${cls}_${d.key}_${period}`;
                               const entry = scheduleData[key];
@@ -621,28 +664,35 @@ export const App: React.FC = () => {
                               return (
                                 <td 
                                   key={cls}
-                                  className="p-1 border-l border-slate-800 print:border-black min-w-[125px] h-14 align-middle"
+                                  className={`p-2 border-l border-b min-w-[140px] align-middle whitespace-nowrap ${
+                                    tableTheme === 'EXCEL_LIGHT'
+                                      ? 'border-slate-300 text-slate-800 hover:outline hover:outline-2 hover:outline-emerald-500 hover:bg-emerald-50/70'
+                                      : 'border-slate-800 text-slate-200 hover:bg-slate-800/80'
+                                  }`}
                                 >
                                   {entry ? (
-                                    <div
-                                      className="w-full h-full rounded-xl p-1.5 flex flex-col justify-center items-center text-white print:text-black shadow-xs transition-all hover:scale-105"
-                                      style={{
-                                        backgroundColor: matchedSub ? `${matchedSub.color}25` : '#3b82f625',
-                                        borderLeft: `4px solid ${matchedSub ? matchedSub.color : '#3b82f6'}`,
-                                      }}
-                                    >
-                                      <strong
-                                        className="text-xs font-bold truncate max-w-full print:text-black leading-tight"
-                                        style={{ color: matchedSub ? matchedSub.color : '#60a5fa' }}
+                                    tableTheme === 'MODERN_CARDS' ? (
+                                      <div
+                                        className="w-full h-full rounded-lg p-1 flex flex-col justify-center items-center text-white shadow-xs"
+                                        style={{
+                                          backgroundColor: matchedSub ? `${matchedSub.color}25` : '#3b82f625',
+                                          borderLeft: `3px solid ${matchedSub ? matchedSub.color : '#3b82f6'}`,
+                                        }}
                                       >
-                                        {entry.subject}
-                                      </strong>
-                                      <span className="text-[11px] text-slate-300 print:text-gray-700 truncate max-w-full leading-tight mt-0.5 font-medium">
-                                        {entry.teacher.replace(/^Cô |^Thầy /i, '')}
+                                        <strong className="text-xs font-bold leading-tight" style={{ color: matchedSub ? matchedSub.color : '#60a5fa' }}>
+                                          {entry.subject}
+                                        </strong>
+                                        <span className="text-[11px] text-slate-300 leading-tight mt-0.5">
+                                          {entry.teacher}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="font-medium">
+                                        {entry.subject} ({entry.teacher})
                                       </span>
-                                    </div>
+                                    )
                                   ) : (
-                                    <span className="text-slate-800 print:text-transparent">-</span>
+                                    <span className="text-transparent">-</span>
                                   )}
                                 </td>
                               );
