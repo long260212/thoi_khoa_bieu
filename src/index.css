@@ -62,3 +62,23 @@
     break-after: page !important;
   }
 }
+
+/* Custom prominent horizontal scrollbar for timetable grid */
+::-webkit-scrollbar:horizontal {
+  height: 11px !important;
+}
+
+::-webkit-scrollbar-track:horizontal {
+  background: #0f172a !important;
+  border-radius: 9999px;
+  border: 1px solid #1e293b;
+}
+
+::-webkit-scrollbar-thumb:horizontal {
+  background: linear-gradient(90deg, #2563eb, #6366f1, #9333ea) !important;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:horizontal:hover {
+  background: linear-gradient(90deg, #3b82f6, #818cf8, #a855f7) !important;
+}
