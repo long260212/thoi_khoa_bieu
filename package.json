@@ -1,18 +1,58 @@
 {
-  "name": "edu-schedule-manager",
+  "name": "school-timetable-scheduler",
+  "private": true,
   "version": "1.0.0",
-  "description": "Hệ thống Quản lý Lịch Giảng Dạy & Báo Giảng Giáo Viên",
-  "main": "index.html",
+  "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
-    "start": "npx -y serve .",
-    "dev": "npx -y serve ."
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "electron:dev": "vite",
+    "electron:build": "tsc && vite build && electron-builder"
   },
-  "keywords": [
-    "education",
-    "schedule",
-    "teaching",
-    "lesson-plan"
-  ],
-  "author": "",
-  "license": "MIT"
+  "dependencies": {
+    "@tanstack/react-virtual": "^3.13.2",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.475.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^3.0.1",
+    "xlsx": "^0.18.5",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "electron": "^34.2.0",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.5.2",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0"
+  },
+  "build": {
+    "appId": "com.eduschedule.timetable",
+    "productName": "EduTimetable Pro - Xếp Thời Khóa Biểu Tự Động",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
 }
