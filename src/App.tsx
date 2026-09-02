@@ -29,19 +29,50 @@ import { autoScheduleAllClasses, ScheduleResultEntry } from './utils/schedulerEn
 import { MultiSourceImportModal } from './components/ImportCenter/MultiSourceImportModal';
 import { downloadSampleExcelTemplate } from './utils/multiSourceImporter';
 
-// Ngày trong tuần
+// 5 ngày trong tuần (Thứ Hai đến Thứ Sáu - HOÀN TOÀN KHÔNG HỌC THỨ BẢY)
 const DAYS = [
   { key: 'THU_2', label: 'Thứ Hai', short: 'Thứ 2' },
   { key: 'THU_3', label: 'Thứ Ba', short: 'Thứ 3' },
   { key: 'THU_4', label: 'Thứ Tư', short: 'Thứ 4' },
   { key: 'THU_5', label: 'Thứ Năm', short: 'Thứ 5' },
   { key: 'THU_6', label: 'Thứ Sáu', short: 'Thứ 6' },
-  { key: 'THU_7', label: 'Thứ Bảy', short: 'Thứ 7' },
+];
+
+// Cấu hình các buổi và tiết học: Buổi Sáng (1..5) & Buổi Chiều (1..2)
+const SESSIONS_CONFIG = [
+  {
+    sessionKey: 'SANG',
+    sessionLabel: 'SÁNG',
+    periods: [
+      { p: 1, sessionP: 1, label: 'Tiết 1' },
+      { p: 2, sessionP: 2, label: 'Tiết 2' },
+      { p: 3, sessionP: 3, label: 'Tiết 3' },
+      { p: 4, sessionP: 4, label: 'Tiết 4' },
+      { p: 5, sessionP: 5, label: 'Tiết 5' },
+    ],
+  },
+  {
+    sessionKey: 'CHIEU',
+    sessionLabel: 'CHIỀU',
+    periods: [
+      { p: 6, sessionP: 1, label: 'Tiết 1' },
+      { p: 7, sessionP: 2, label: 'Tiết 2' },
+    ],
+  },
+];
+
+// Danh sách phẳng tất cả các tiết trong tuần
+const ALL_PERIOD_ITEMS = [
+  { p: 1, session: 'SÁNG', label: 'Tiết 1', display: 'Sáng Tiết 1' },
+  { p: 2, session: 'SÁNG', label: 'Tiết 2', display: 'Sáng Tiết 2' },
+  { p: 3, session: 'SÁNG', label: 'Tiết 3', display: 'Sáng Tiết 3' },
+  { p: 4, session: 'SÁNG', label: 'Tiết 4', display: 'Sáng Tiết 4' },
+  { p: 5, session: 'SÁNG', label: 'Tiết 5', display: 'Sáng Tiết 5' },
+  { p: 6, session: 'CHIỀU', label: 'Chiều T1', display: 'Chiều Tiết 1' },
+  { p: 7, session: 'CHIỀU', label: 'Chiều T2', display: 'Chiều Tiết 2' },
 ];
 
 export const App: React.FC = () => {
-  // Chế độ xem:
-  // 'MASTER_ALL_CLASSES': Tờ Thời Khóa Biểu Toàn Trường (Tất cả các lớp - Mặc định)
   // Chế độ xem:
   // 'MASTER_ALL_CLASSES': Tờ Thời Khóa Biểu Toàn Trường (Tất cả các lớp - Mặc định)
   // 'TIMETABLE_TEACHER': Tờ Thời Khóa Biểu Riêng Của Từng Giáo Viên (Tách biệt hoàn toàn)
@@ -77,17 +108,18 @@ export const App: React.FC = () => {
   const [schedulingStats, setSchedulingStats] = useState<{ total: number; time: number } | null>(null);
 
   // Map tra cứu lịch giảng dạy của từng giáo viên O(1): teacherName -> Record<`${day}_${period}`, { className, subject }>
+  // Fix chính xác lỗi regex bóc tách className, dayKey, period (tránh bị nuốt thành "6A2_THU")
   const teacherScheduleMap = useMemo(() => {
     const map: Record<string, Record<string, { className: string; subject: string }>> = {};
     Object.entries(scheduleData).forEach(([key, entry]) => {
       if (!entry || !entry.teacher) return;
-      const parts = key.split('_');
-      const period = parts.pop();
-      const day = parts.pop();
-      const cls = parts.join('_');
-      const tName = entry.teacher.trim().toLowerCase();
-      if (!map[tName]) map[tName] = {};
-      map[tName][`${day}_${period}`] = { className: cls, subject: entry.subject };
+      const match = key.match(/^(.+)_(THU_\d+)_(\d+)$/);
+      if (match) {
+        const [, cls, dayKey, p] = match;
+        const tName = entry.teacher.trim().toLowerCase();
+        if (!map[tName]) map[tName] = {};
+        map[tName][`${dayKey}_${p}`] = { className: cls, subject: entry.subject };
+      }
     });
     return map;
   }, [scheduleData]);
@@ -262,12 +294,12 @@ export const App: React.FC = () => {
     const headerRow = ['Thứ', 'Tiết', ...classList.map(c => `Lớp ${c}`)];
     masterRows.push(headerRow);
 
-    // Từng dòng: Thứ 2 Tiết 1-5 đến Thứ 7 Tiết 1-5
+    // Từng dòng: Thứ 2 đến Thứ 6 (Sáng Tiết 1-5, Chiều Tiết 1-2)
     DAYS.forEach((d) => {
-      [1, 2, 3, 4, 5].forEach((p) => {
-        const row = [d.label, `Tiết ${p}`];
+      ALL_PERIOD_ITEMS.forEach((item) => {
+        const row = [d.label, item.display];
         classList.forEach((cls) => {
-          const entry = scheduleData[`${cls}_${d.key}_${p}`];
+          const entry = scheduleData[`${cls}_${d.key}_${item.p}`];
           row.push(entry ? `${entry.subject} (${entry.teacher})` : '');
         });
         masterRows.push(row);
@@ -296,22 +328,25 @@ export const App: React.FC = () => {
     rows.push([schoolName.toUpperCase()]);
     rows.push([`THỜI KHÓA BIỂU CÁ NHÂN GIÁO VIÊN: ${teacherName.toUpperCase()}`]);
     rows.push([schoolYear]);
+    rows.push(['(Áp dụng lịch học 5 ngày: Thứ Hai đến Thứ Sáu • Thứ Bảy Nghỉ)']);
     rows.push([]);
 
-    // Header: Tiết, Thứ Hai -> Thứ Bảy
-    rows.push(['Tiết / Buổi', ...DAYS.map((d) => d.label)]);
+    // Header: Buổi, Tiết, Thứ Hai -> Thứ Sáu
+    rows.push(['Buổi', 'Tiết', ...DAYS.map((d) => d.label)]);
 
-    [1, 2, 3, 4, 5].forEach((period) => {
-      const row = [`Tiết ${period}`];
-      DAYS.forEach((d) => {
-        const item = teacherScheduleMap[teacherName.toLowerCase()]?.[`${d.key}_${period}`];
-        if (item) {
-          row.push(`${item.subject} (Lớp ${item.className})`);
-        } else {
-          row.push('-');
-        }
+    SESSIONS_CONFIG.forEach((s) => {
+      s.periods.forEach((item) => {
+        const row = [s.sessionLabel, item.label];
+        DAYS.forEach((d) => {
+          const sched = teacherScheduleMap[teacherName.toLowerCase()]?.[`${d.key}_${item.p}`];
+          if (sched) {
+            row.push(`${sched.subject} (Lớp ${sched.className})`);
+          } else {
+            row.push('-');
+          }
+        });
+        rows.push(row);
       });
-      rows.push(row);
     });
 
     const info = teacherAssignmentsList.find(t => t.name.toLowerCase() === teacherName.toLowerCase());
@@ -329,13 +364,13 @@ export const App: React.FC = () => {
     const wb = XLSX.utils.book_new();
     const masterTeacherRows: any[] = [];
     masterTeacherRows.push([schoolName.toUpperCase()]);
-    masterTeacherRows.push(['THỜI KHÓA BIỂU TỔNG HỢP TOÀN BỘ GIÁO VIÊN']);
+    masterTeacherRows.push(['THỜI KHÓA BIỂU TỔNG HỢP TOÀN BỘ GIÁO VIÊN (LỊCH 5 NGÀY THỨ 2 - THỨ 6)']);
     masterTeacherRows.push([schoolYear]);
     masterTeacherRows.push([]);
 
     const header = ['STT', 'Họ và tên Giáo viên', 'Chức vụ', 'Định mức', 'Số tiết dạy'];
     DAYS.forEach(d => {
-      [1, 2, 3, 4, 5].forEach(p => header.push(`${d.short} T${p}`));
+      ALL_PERIOD_ITEMS.forEach(p => header.push(`${d.short} ${p.label}`));
     });
     masterTeacherRows.push(header);
 
@@ -343,8 +378,8 @@ export const App: React.FC = () => {
       const tSched = teacherScheduleMap[t.name.toLowerCase()] || {};
       const row = [idx + 1, t.name, t.duty || 'GV', t.quota, Object.keys(tSched).length];
       DAYS.forEach(d => {
-        [1, 2, 3, 4, 5].forEach(p => {
-          const item = tSched[`${d.key}_${p}`];
+        ALL_PERIOD_ITEMS.forEach(p => {
+          const item = tSched[`${d.key}_${p.p}`];
           row.push(item ? `${item.subject} (${item.className})` : '');
         });
       });
@@ -727,18 +762,18 @@ export const App: React.FC = () => {
                     </tr>
                   </thead>
 
-                  {/* THÂN BẢNG: Mỗi dòng chứa Thứ, Tiết và Phân công của từng lớp */}
+                  {/* THÂN BẢNG: Mỗi dòng chứa Thứ, Tiết và Phân công của từng lớp (5 ngày, sáng 5 tiết + chiều 2 tiết) */}
                   <tbody>
                     {DAYS.map((d) => (
                       <React.Fragment key={d.key}>
-                        {[1, 2, 3, 4, 5].map((period) => (
+                        {ALL_PERIOD_ITEMS.map((item) => (
                           <tr 
-                            key={`${d.key}_${period}`} 
-                            id={period === 1 ? `day_row_${d.key}` : undefined}
+                            key={`${d.key}_${item.p}`} 
+                            id={item.p === 1 ? `day_row_${d.key}` : undefined}
                             className={`transition-colors h-10 ${
                               tableTheme === 'EXCEL_LIGHT'
-                                ? 'hover:bg-emerald-50/60'
-                                : 'hover:bg-slate-800/60'
+                                ? item.session === 'CHIỀU' ? 'bg-amber-50/20 hover:bg-emerald-50/60' : 'hover:bg-emerald-50/60'
+                                : item.session === 'CHIỀU' ? 'bg-slate-950/80 hover:bg-slate-800/60' : 'hover:bg-slate-800/60'
                             }`}
                           >
                             {/* CỘT 1: THỨ (Hiển thị đầy đủ tên thứ trên từng dòng như trong Excel) */}
@@ -750,18 +785,20 @@ export const App: React.FC = () => {
                               {d.label}
                             </td>
 
-                            {/* CỘT 2: TIẾT (Tiết 1, Tiết 2... Tiết 5) */}
-                            <td className={`p-2 text-center font-medium border-r-2 border-b min-w-[75px] sticky left-[90px] z-20 whitespace-nowrap ${
+                            {/* CỘT 2: TIẾT (Tiết 1..5 Sáng, Chiều T1..T2) */}
+                            <td className={`p-2 text-center font-medium border-r-2 border-b min-w-[85px] sticky left-[90px] z-20 whitespace-nowrap ${
                               tableTheme === 'EXCEL_LIGHT'
                                 ? 'bg-white text-slate-800 border-slate-300 border-r-emerald-600'
                                 : 'bg-slate-950 text-slate-200 border-slate-700 border-r-emerald-500'
                             }`}>
-                              Tiết {period}
+                              <span className={item.session === 'CHIỀU' ? 'text-amber-600 dark:text-amber-400 font-bold' : ''}>
+                                {item.label} {item.session === 'CHIỀU' ? '(Chiều)' : ''}
+                              </span>
                             </td>
 
                             {/* CỘT CÁC LỚP HỌC: Môn Học (Giáo Viên) */}
                             {filteredClassList.map((cls) => {
-                              const key = `${cls}_${d.key}_${period}`;
+                              const key = `${cls}_${d.key}_${item.p}`;
                               const entry = scheduleData[key];
                               const matchedSub = entry ? Object.values(SUBJECT_NAME_MAP).find((s) => s.standardName.toLowerCase() === entry.subject.toLowerCase()) : null;
 
@@ -863,69 +900,78 @@ export const App: React.FC = () => {
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6 print:bg-white print:text-black print:border-none print:shadow-none print:p-0">
               <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800 print:border-b-2 print:border-black">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-400 uppercase">{schoolName}</h3>
-                  <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2 print:text-black mt-1">
-                    THỜI KHÓA BIỂU: <span className="text-brand-400 print:text-black underline underline-offset-4">LỚP {selectedClass}</span>
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{schoolName}</h3>
+                  <h2 className="text-2xl font-black text-orange-400 print:text-black tracking-tight flex items-center gap-2 mt-1">
+                    THỜI KHOÁ BIỂU {selectedClass} <span className="text-sm font-normal text-slate-400 print:text-gray-600">(Áp dụng từ ngày 07/09/2026)</span>
                   </h2>
-                  <p className="text-xs text-slate-400 mt-0.5">{schoolYear}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Lịch học 5 ngày (Thứ 2 đến Thứ 6) • Thứ 7 Nghỉ</p>
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-slate-800 print:border-2 print:border-black">
-                <table className="w-full text-center border-collapse text-xs print:text-black">
+              <div className="overflow-x-auto rounded-2xl border-2 border-orange-500/50 print:border-2 print:border-black shadow-xl">
+                <table className="w-full text-center border-collapse text-xs print:text-black border border-slate-700 print:border-2 print:border-black">
                   <thead>
-                    <tr className="bg-slate-950 print:bg-slate-100 border-b border-slate-800 print:border-b-2 print:border-black">
-                      <th className="p-3 font-bold text-slate-400 print:text-black uppercase w-28 text-left pl-4">
-                        Tiết / Buổi
+                    <tr className="bg-[#ea580c] text-white print:bg-[#ea580c] print:text-white font-black text-sm">
+                      <th className="p-3 uppercase w-24 text-center border border-orange-600">
+                        Buổi
+                      </th>
+                      <th className="p-3 uppercase w-20 text-center border border-orange-600">
+                        Tiết
                       </th>
                       {DAYS.map((d) => (
-                        <th key={d.key} className="p-3 font-bold text-slate-200 print:text-black border-l border-slate-800 print:border-black text-sm">
+                        <th key={d.key} className="p-3 border border-orange-600 font-bold">
                           {d.label}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="bg-slate-950/60 print:bg-slate-200 font-bold text-slate-300 print:text-black text-left border-y border-slate-800 print:border-black">
-                      <td colSpan={7} className="py-2 px-4 flex items-center gap-2 text-brand-300 print:text-black text-xs font-bold uppercase">
-                        <Sun className="w-4 h-4 text-amber-400 no-print" />
-                        <span>Buổi Sáng (Tiết 1 đến Tiết 5)</span>
-                      </td>
-                    </tr>
-                    {[1, 2, 3, 4, 5].map((period) => (
-                      <tr key={period} className="border-b border-slate-800 print:border-black hover:bg-slate-800/20 transition-colors">
-                        <td className="p-3 font-mono font-bold text-slate-400 print:text-black text-left pl-4 bg-slate-950/40 print:bg-transparent">
-                          Tiết {period}
-                        </td>
-                        {DAYS.map((d) => {
-                          const cellKey = `${selectedClass}_${d.key}_${period}`;
-                          const cell = scheduleData[cellKey];
-                          const matchedSub = cell ? Object.values(SUBJECT_NAME_MAP).find((s) => s.standardName.toLowerCase() === cell.subject.toLowerCase()) : null;
-
-                          return (
-                            <td key={d.key} className="p-2 border-l border-slate-800 print:border-black min-w-[130px] h-16 align-middle relative">
-                              {cell && cell.subject ? (
-                                <div
-                                  className="h-full rounded-xl p-2 flex flex-col justify-center items-center text-white print:text-black shadow-sm"
-                                  style={{
-                                    backgroundColor: matchedSub ? `${matchedSub.color}25` : '#3b82f625',
-                                    borderLeft: `4px solid ${matchedSub ? matchedSub.color : '#3b82f6'}`,
-                                  }}
-                                >
-                                  <strong className="font-bold text-xs truncate max-w-full print:text-black" style={{ color: matchedSub ? matchedSub.color : '#60a5fa' }}>
-                                    {cell.subject}
-                                  </strong>
-                                  <span className="text-[11px] font-medium text-slate-300 print:text-gray-700 truncate max-w-full mt-0.5">
-                                    GV: {cell.teacher}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-slate-700 print:text-transparent">-</span>
-                              )}
+                    {SESSIONS_CONFIG.map((s) => (
+                      <React.Fragment key={s.sessionKey}>
+                        {s.periods.map((item, pIdx) => (
+                          <tr key={item.p} className="border-b border-slate-800 print:border-black hover:bg-slate-800/20 transition-colors h-16">
+                            {pIdx === 0 && (
+                              <td
+                                rowSpan={s.periods.length}
+                                className="p-3 font-black text-sm text-center bg-slate-950/70 print:bg-transparent border-r-2 border-slate-700 print:border-black align-middle uppercase text-orange-400 print:text-black"
+                              >
+                                {s.sessionLabel}
+                              </td>
+                            )}
+                            <td className="p-3 font-mono font-bold text-center bg-slate-950/40 print:bg-transparent border-r border-slate-700 print:border-black w-20">
+                              {item.sessionP}
                             </td>
-                          );
-                        })}
-                      </tr>
+                            {DAYS.map((d) => {
+                              const cellKey = `${selectedClass}_${d.key}_${item.p}`;
+                              const cell = scheduleData[cellKey];
+                              const matchedSub = cell ? Object.values(SUBJECT_NAME_MAP).find((sm) => sm.standardName.toLowerCase() === cell.subject.toLowerCase()) : null;
+
+                              return (
+                                <td key={d.key} className="p-2 border-l border-slate-800 print:border-black min-w-[130px] h-16 align-middle relative">
+                                  {cell && cell.subject ? (
+                                    <div
+                                      className="h-full rounded-xl p-2 flex flex-col justify-center items-center text-white print:text-black shadow-sm"
+                                      style={{
+                                        backgroundColor: matchedSub ? `${matchedSub.color}25` : '#ea580c25',
+                                        borderLeft: `4px solid ${matchedSub ? matchedSub.color : '#ea580c'}`,
+                                      }}
+                                    >
+                                      <strong className="font-bold text-xs truncate max-w-full print:text-black" style={{ color: matchedSub ? matchedSub.color : '#fb923c' }}>
+                                        {cell.subject}
+                                      </strong>
+                                      <span className="text-[11px] font-medium text-slate-300 print:text-gray-700 truncate max-w-full mt-0.5">
+                                        {cell.teacher}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-700 print:text-transparent">-</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -978,11 +1024,13 @@ export const App: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {[1, 2, 3, 4, 5].map((period) => (
-                        <tr key={period} className="border-b border-slate-800 print:border-black h-12">
-                          <td className="p-2 font-mono font-bold text-left pl-3 bg-slate-950/40 print:bg-transparent">Tiết {period}</td>
+                      {ALL_PERIOD_ITEMS.map((item) => (
+                        <tr key={item.p} className="border-b border-slate-800 print:border-black h-12">
+                          <td className="p-2 font-mono font-bold text-left pl-3 bg-slate-950/40 print:bg-transparent w-28">
+                            {item.display}
+                          </td>
                           {DAYS.map((d) => {
-                            const entry = scheduleData[`${cls}_${d.key}_${period}`];
+                            const entry = scheduleData[`${cls}_${d.key}_${item.p}`];
                             return (
                               <td key={d.key} className="p-1 border-l border-slate-800 print:border-black">
                                 {entry ? (
@@ -1170,51 +1218,71 @@ export const App: React.FC = () => {
                   <table className="w-full text-center border-collapse text-xs print:text-black">
                     <thead>
                       <tr className="bg-slate-950 print:bg-slate-100 border-b-2 border-slate-800 print:border-b-2 print:border-black">
-                        <th className="p-3.5 font-black text-slate-200 print:text-black uppercase w-28 text-center bg-slate-950 print:bg-slate-200">
-                          Tiết / Buổi
+                        <th className="p-3 font-black text-slate-200 print:text-black uppercase w-20 text-center bg-slate-950 print:bg-slate-200">
+                          Buổi
+                        </th>
+                        <th className="p-3 font-black text-slate-200 print:text-black uppercase w-24 text-center bg-slate-950 print:bg-slate-200">
+                          Tiết
                         </th>
                         {DAYS.map((d) => (
-                          <th key={d.key} className="p-3.5 font-black text-slate-200 print:text-black border-l border-slate-800 print:border-black text-sm uppercase">
+                          <th key={d.key} className="p-3 font-black text-slate-200 print:text-black border-l border-slate-800 print:border-black text-sm uppercase">
                             {d.label}
                           </th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800 print:divide-black">
-                      {[1, 2, 3, 4, 5].map((period) => (
-                        <tr key={period} className="hover:bg-slate-800/30 transition-colors h-16">
-                          <td className="p-3 font-mono font-bold text-slate-300 print:text-black text-center bg-slate-950/80 print:bg-transparent border-r border-slate-800 print:border-black">
-                            Tiết {period}
-                          </td>
-                          {DAYS.map((d) => {
-                            const item = tSched[`${d.key}_${period}`];
-                            const matchedSub = item ? Object.values(SUBJECT_NAME_MAP).find((s) => s.standardName.toLowerCase() === item.subject.toLowerCase()) : null;
-
-                            return (
-                              <td key={d.key} className="p-2 border-l border-slate-800 print:border-black min-w-[135px] align-middle">
-                                {item ? (
-                                  <div
-                                    className="w-full h-full rounded-xl p-2 text-white print:text-black flex flex-col justify-center items-center shadow-md transition-all hover:scale-105"
-                                    style={{
-                                      backgroundColor: matchedSub ? `${matchedSub.color}25` : '#6366f125',
-                                      borderLeft: `4px solid ${matchedSub ? matchedSub.color : '#6366f1'}`,
-                                      borderRight: `1px solid ${matchedSub ? `${matchedSub.color}40` : '#6366f140'}`,
-                                    }}
-                                  >
-                                    <strong className="text-xs font-black truncate max-w-full leading-tight" style={{ color: matchedSub ? matchedSub.color : '#818cf8' }}>
-                                      {item.subject}
-                                    </strong>
-                                    <span className="text-xs font-bold text-white print:text-black bg-slate-900/80 print:bg-slate-200 px-2 py-0.5 rounded-md mt-1">
-                                      Lớp {item.className}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-700 print:text-gray-300 italic text-[11px]">-</span>
-                                )}
+                      {SESSIONS_CONFIG.map((s) => (
+                        <React.Fragment key={s.sessionKey}>
+                          <tr className="bg-slate-950/80 font-bold text-slate-300 print:text-black text-left border-y border-slate-800 print:border-black">
+                            <td colSpan={2 + DAYS.length} className="py-2 px-4 text-indigo-300 print:text-black text-xs font-bold uppercase tracking-wider">
+                              {s.sessionKey === 'SANG' ? '🌅 Buổi Sáng (Tiết 1 đến Tiết 5)' : '🌇 Buổi Chiều (Tiết 1 đến Tiết 2)'}
+                            </td>
+                          </tr>
+                          {s.periods.map((item, pIdx) => (
+                            <tr key={item.p} className="hover:bg-slate-800/30 transition-colors h-14">
+                              {pIdx === 0 && (
+                                <td
+                                  rowSpan={s.periods.length}
+                                  className="p-2 font-bold text-slate-400 print:text-black text-center bg-slate-950/60 print:bg-transparent border-r border-slate-800 print:border-black align-middle uppercase"
+                                >
+                                  {s.sessionLabel}
+                                </td>
+                              )}
+                              <td className="p-2 font-mono font-bold text-slate-300 print:text-black text-center bg-slate-950/80 print:bg-transparent border-r border-slate-800 print:border-black">
+                                {item.label}
                               </td>
-                            );
-                          })}
-                        </tr>
+                              {DAYS.map((d) => {
+                                const schedItem = tSched[`${d.key}_${item.p}`];
+                                const matchedSub = schedItem ? Object.values(SUBJECT_NAME_MAP).find((sm) => sm.standardName.toLowerCase() === schedItem.subject.toLowerCase()) : null;
+
+                                return (
+                                  <td key={d.key} className="p-2 border-l border-slate-800 print:border-black min-w-[130px] align-middle">
+                                    {schedItem ? (
+                                      <div
+                                        className="w-full h-full rounded-xl p-2 text-white print:text-black flex flex-col justify-center items-center shadow-md transition-all hover:scale-105"
+                                        style={{
+                                          backgroundColor: matchedSub ? `${matchedSub.color}25` : '#6366f125',
+                                          borderLeft: `4px solid ${matchedSub ? matchedSub.color : '#6366f1'}`,
+                                          borderRight: `1px solid ${matchedSub ? `${matchedSub.color}40` : '#6366f140'}`,
+                                        }}
+                                      >
+                                        <strong className="text-xs font-black truncate max-w-full leading-tight" style={{ color: matchedSub ? matchedSub.color : '#818cf8' }}>
+                                          {schedItem.subject}
+                                        </strong>
+                                        <span className="text-xs font-bold text-white print:text-black bg-slate-900/80 print:bg-slate-200 px-2 py-0.5 rounded-md mt-1">
+                                          Lớp {schedItem.className}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-slate-700 print:text-gray-300 italic text-[11px]">-</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
@@ -1331,19 +1399,19 @@ export const App: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800 print:divide-black">
-                        {[1, 2, 3, 4, 5].map((period) => (
-                          <tr key={period} className="h-14">
-                            <td className="p-2 font-mono font-bold text-slate-400 print:text-black text-center bg-slate-950/40 print:bg-transparent border-r border-slate-800 print:border-black">
-                              Tiết {period}
+                        {ALL_PERIOD_ITEMS.map((item) => (
+                          <tr key={item.p} className="h-12">
+                            <td className="p-2 font-mono font-bold text-slate-400 print:text-black text-center bg-slate-950/40 print:bg-transparent border-r border-slate-800 print:border-black w-24">
+                              {item.display}
                             </td>
                             {DAYS.map((d) => {
-                              const item = tSched[`${d.key}_${period}`];
+                              const schedItem = tSched[`${d.key}_${item.p}`];
                               return (
                                 <td key={d.key} className="p-1 border-l border-slate-800 print:border-black">
-                                  {item ? (
+                                  {schedItem ? (
                                     <div className="text-center">
-                                      <strong className="block font-bold text-xs text-indigo-300 print:text-black">{item.subject}</strong>
-                                      <span className="text-[11px] text-slate-300 print:text-gray-700 font-bold">Lớp {item.className}</span>
+                                      <strong className="block font-bold text-xs text-indigo-300 print:text-black">{schedItem.subject}</strong>
+                                      <span className="text-[11px] text-slate-300 print:text-gray-700 font-bold">Lớp {schedItem.className}</span>
                                     </div>
                                   ) : (
                                     <span className="text-slate-700 print:text-gray-300">-</span>

@@ -1,7 +1,10 @@
 import { ParsedTeachingUnit } from './assignmentParser';
 
-export const DAYS_LIST = ['THU_2', 'THU_3', 'THU_4', 'THU_5', 'THU_6', 'THU_7'];
-export const PERIODS_LIST = [1, 2, 3, 4, 5]; // 5 tiết mỗi buổi sáng
+// 5 ngày trong tuần (Thứ Hai đến Thứ Sáu - KHÔNG HỌC THỨ BẢY THEO QUY ĐỊNH)
+export const DAYS_LIST = ['THU_2', 'THU_3', 'THU_4', 'THU_5', 'THU_6'];
+
+// Buổi Sáng: Tiết 1, 2, 3, 4, 5 | Buổi Chiều: Tiết 6, 7 (tương ứng Chiều Tiết 1, Tiết 2)
+export const PERIODS_LIST = [1, 2, 3, 4, 5, 6, 7];
 
 export interface ScheduleResultEntry {
   subject: string;
@@ -17,20 +20,20 @@ const SUBJECT_PEDAGOGY_RULES: Record<string, {
   isHeavy: boolean;           // Môn tư duy nặng
   isActivity: boolean;        // Môn vận động / nghệ thuật
 }> = {
-  'toán': { preferredPeriods: [1, 2, 3], penaltyPeriods: [5], allowDouble: true, maxPerDay: 2, isHeavy: true, isActivity: false },
-  'ngữ văn': { preferredPeriods: [1, 2, 3], penaltyPeriods: [5], allowDouble: true, maxPerDay: 2, isHeavy: true, isActivity: false },
-  'văn': { preferredPeriods: [1, 2, 3], penaltyPeriods: [5], allowDouble: true, maxPerDay: 2, isHeavy: true, isActivity: false },
-  'khtn': { preferredPeriods: [1, 2, 3, 4], penaltyPeriods: [5], allowDouble: true, maxPerDay: 2, isHeavy: true, isActivity: false },
-  'tiếng anh': { preferredPeriods: [1, 2, 3, 4], penaltyPeriods: [5], allowDouble: false, maxPerDay: 1, isHeavy: true, isActivity: false },
-  'lịch sử': { preferredPeriods: [2, 3, 4], penaltyPeriods: [], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
-  'địa lí': { preferredPeriods: [2, 3, 4], penaltyPeriods: [], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
-  'gdcd': { preferredPeriods: [3, 4, 5], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
-  'tin học': { preferredPeriods: [3, 4, 5], penaltyPeriods: [], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
-  'gd thể chất': { preferredPeriods: [3, 4, 5], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: true },
-  'mĩ thuật': { preferredPeriods: [4, 5, 3], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: true },
-  'âm nhạc': { preferredPeriods: [4, 5, 3], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: true },
-  'hđtn-hn': { preferredPeriods: [4, 5], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: true },
-  'gd địa phương': { preferredPeriods: [3, 4, 5], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
+  'toán': { preferredPeriods: [1, 2, 3, 4], penaltyPeriods: [6, 7], allowDouble: true, maxPerDay: 2, isHeavy: true, isActivity: false },
+  'ngữ văn': { preferredPeriods: [1, 2, 3, 4], penaltyPeriods: [], allowDouble: true, maxPerDay: 2, isHeavy: true, isActivity: false },
+  'văn': { preferredPeriods: [1, 2, 3, 4], penaltyPeriods: [], allowDouble: true, maxPerDay: 2, isHeavy: true, isActivity: false },
+  'khtn': { preferredPeriods: [1, 2, 3, 4], penaltyPeriods: [7], allowDouble: true, maxPerDay: 2, isHeavy: true, isActivity: false },
+  'tiếng anh': { preferredPeriods: [1, 2, 3, 4], penaltyPeriods: [7], allowDouble: false, maxPerDay: 1, isHeavy: true, isActivity: false },
+  'lịch sử': { preferredPeriods: [2, 3, 4, 5], penaltyPeriods: [], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
+  'địa lí': { preferredPeriods: [2, 3, 4, 5], penaltyPeriods: [], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
+  'gdcd': { preferredPeriods: [3, 4, 5, 6], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
+  'tin học': { preferredPeriods: [4, 5, 6, 7], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
+  'gd thể chất': { preferredPeriods: [3, 4, 5, 6], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: true },
+  'mĩ thuật': { preferredPeriods: [4, 5, 6, 7], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: true },
+  'âm nhạc': { preferredPeriods: [4, 5, 6, 7], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: true },
+  'hđtn-hn': { preferredPeriods: [4, 5, 6, 7], penaltyPeriods: [1], allowDouble: true, maxPerDay: 2, isHeavy: false, isActivity: true },
+  'gd địa phương': { preferredPeriods: [3, 4, 5, 6], penaltyPeriods: [1], allowDouble: false, maxPerDay: 1, isHeavy: false, isActivity: false },
 };
 
 export function autoScheduleAllClasses(
@@ -59,9 +62,9 @@ export function autoScheduleAllClasses(
   const getSlotKey = (day: string, p: number) => `${day}_${p}`;
   const getScheduleKey = (cls: string, day: string, p: number) => `${cls}_${day}_${p}`;
 
-  // 1. CỐ ĐỊNH CHUẨN SƯ PHẠM:
-  // - Chào Cờ (SHDC): Thứ 2 Tiết 1
-  // - Sinh Hoạt Lớp (SHL): Thứ 7 Tiết 5
+  // 1. CỐ ĐỊNH CHUẨN SƯ PHẠM (ÁP DỤNG LỊCH 5 NGÀY THỨ 2 - THỨ 6):
+  // - Chào Cờ (SHDC): Thứ 2 Tiết 1 (Sáng)
+  // - Sinh Hoạt Lớp (SHL): Thứ 6 Tiết 5 (Sáng)
   classList.forEach((cls) => {
     // Chào cờ
     const ccKey = getScheduleKey(cls, 'THU_2', 1);
@@ -70,9 +73,9 @@ export function autoScheduleAllClasses(
     classOccupancy[cls].add(getSlotKey('THU_2', 1));
 
     // Sinh hoạt lớp
-    const shlKey = getScheduleKey(cls, 'THU_7', 5);
+    const shlKey = getScheduleKey(cls, 'THU_6', 5);
     schedule[shlKey] = { subject: 'Sinh Hoạt Lớp', teacher: 'GVCN' };
-    classOccupancy[cls].add(getSlotKey('THU_7', 5));
+    classOccupancy[cls].add(getSlotKey('THU_6', 5));
   });
 
   // 2. NHÓM PHÂN CÔNG THÀNH CÁC BLOCK SƯ PHẠM:
@@ -224,9 +227,10 @@ export function autoScheduleAllClasses(
         return; // Đã quá số tiết tối đa cho phép của môn trong ngày
       }
 
-      // Quét các vị trí có thể đặt block (Tiết 1 đến 5 - blockSize + 1)
-      const maxStart = 5 - blockSize + 1;
-      for (let p = 1; p <= maxStart; p++) {
+      // Các vị trí bắt đầu hợp lệ (Không vắt qua giờ nghỉ trưa giữa Tiết 5 Sáng và Tiết 1 Chiều)
+      const validStartPeriods = blockSize === 2 ? [1, 2, 3, 4, 6] : [1, 2, 3, 4, 5, 6, 7];
+
+      for (const p of validStartPeriods) {
         let isFree = true;
 
         for (let offset = 0; offset < blockSize; offset++) {
@@ -296,7 +300,7 @@ export function autoScheduleAllClasses(
       for (const day of daysPool) {
         if (placed) break;
 
-        for (let p = 1; p <= 5; p++) {
+        for (const p of [1, 2, 3, 4, 5, 6, 7]) {
           const slotKey = getSlotKey(day, p);
           const schedKey = getScheduleKey(className, day, p);
 
