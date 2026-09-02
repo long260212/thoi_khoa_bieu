@@ -15,10 +15,21 @@ import {
   Sparkles, 
   Sun, 
   Moon, 
-  Search,
-  RotateCcw,
-  CheckCircle2
+  Plus, 
+  Trash2, 
+  AlertTriangle, 
+  Check, 
+  X, 
+  Info,
+  Edit3
 } from 'lucide-react';
+
+interface ActiveSlotSelection {
+  classId: string;
+  day: DayOfWeek;
+  period: number;
+  existingEntry?: ScheduleEntry;
+}
 
 export const TimetableMatrix: React.FC = () => {
   const activeView = useScheduleStore((state) => state.activeView);
@@ -33,18 +44,22 @@ export const TimetableMatrix: React.FC = () => {
   const selectedTeacherId = useScheduleStore((state) => state.selectedTeacherId);
   const setSelectedTeacher = useScheduleStore((state) => state.setSelectedTeacher);
   const startAutoGenerate = useScheduleStore((state) => state.startAutoGenerate);
+  const assignSlot = useScheduleStore((state) => state.assignSlot);
+  const removeSlot = useScheduleStore((state) => state.removeSlot);
 
-  const [searchClassQuery, setSearchClassQuery] = useState('');
-  const [searchTeacherQuery, setSearchTeacherQuery] = useState('');
+  // Active Slot Editor Modal state
+  const [editingSlot, setEditingSlot] = useState<ActiveSlotSelection | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
+  const [selectedTeacherIdForSlot, setSelectedTeacherIdForSlot] = useState<string>('');
 
-  // Class List sorted
+  // Sorted list of Classes
   const classList = useMemo(() => {
     return Object.values(classes).sort((a, b) =>
       a.code.localeCompare(b.code, undefined, { numeric: true })
     );
   }, [classes]);
 
-  // Teacher List sorted
+  // Sorted list of Teachers
   const teacherList = useMemo(() => {
     return Object.values(teachers).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   }, [teachers]);
@@ -57,7 +72,6 @@ export const TimetableMatrix: React.FC = () => {
   const currentClassSchedule = useClassSchedule(currentClass?.id || null);
   const currentTeacherSchedule = useTeacherSchedule(currentTeacher?.id || null);
 
-  // Periods for Morning (1-5) and Afternoon (6-10)
   const morningPeriods = [1, 2, 3, 4, 5];
   const afternoonPeriods = [6, 7, 8, 9, 10];
 
@@ -69,7 +83,6 @@ export const TimetableMatrix: React.FC = () => {
   }, [assignments, currentClass]);
 
   const totalScheduledForCurrentClass = Object.keys(currentClassSchedule).length;
-
   const totalScheduledForCurrentTeacher = Object.keys(currentTeacherSchedule).length;
 
   const handlePrint = () => {
@@ -78,6 +91,70 @@ export const TimetableMatrix: React.FC = () => {
 
   const handleExport = () => {
     exportTimetableToExcel(schedule, classes, teachers, subjects);
+  };
+
+  // Open Quick Slot Editor
+  const handleCellClick = (classId: string, day: DayOfWeek, period: number) => {
+    const key = `${classId}_${day}_${period}`;
+    const existing = schedule[key];
+    
+    setEditingSlot({
+      classId,
+      day,
+      period,
+      existingEntry: existing,
+    });
+
+    if (existing) {
+      setSelectedSubjectId(existing.subjectId);
+      setSelectedTeacherIdForSlot(existing.teacherId);
+    } else {
+      // Pick first subject or default
+      const defaultSubId = Object.keys(subjects)[0] || '';
+      setSelectedSubjectId(defaultSubId);
+      // Pick first available teacher or existing
+      const defaultTeacherId = Object.keys(teachers)[0] || '';
+      setSelectedTeacherIdForSlot(defaultTeacherId);
+    }
+  };
+
+  // Check which teacher is busy at the editing slot
+  const teacherAvailability = useMemo(() => {
+    if (!editingSlot) return {};
+    const { day, period, classId } = editingSlot;
+    const busyMap: Record<string, { isBusy: boolean; busyClassCode?: string }> = {};
+
+    Object.values(schedule).forEach((entry) => {
+      if (entry.day === day && entry.period === period && entry.classId !== classId) {
+        busyMap[entry.teacherId] = {
+          isBusy: true,
+          busyClassCode: classes[entry.classId]?.code || 'Lớp khác',
+        };
+      }
+    });
+
+    return busyMap;
+  }, [editingSlot, schedule, classes]);
+
+  const handleSaveSlot = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSlot || !selectedSubjectId || !selectedTeacherIdForSlot) return;
+
+    assignSlot(
+      editingSlot.classId,
+      editingSlot.day,
+      editingSlot.period,
+      selectedSubjectId,
+      selectedTeacherIdForSlot
+    );
+
+    setEditingSlot(null);
+  };
+
+  const handleDeleteSlot = () => {
+    if (!editingSlot) return;
+    removeSlot(editingSlot.classId, editingSlot.day, editingSlot.period);
+    setEditingSlot(null);
   };
 
   return (
@@ -132,7 +209,7 @@ export const TimetableMatrix: React.FC = () => {
               >
                 {classList.map((c) => (
                   <option key={c.id} value={c.id}>
-                    Lớp {c.code} ({c.shift === 'MORNING' ? 'Buổi Sáng' : 'Buổi Chiều'} - {c.room || 'P.Học'})
+                    Lớp {c.code} (Khối {c.grade} • {c.shift === 'MORNING' ? 'Buổi Sáng' : 'Buổi Chiều'})
                   </option>
                 ))}
               </select>
@@ -165,7 +242,7 @@ export const TimetableMatrix: React.FC = () => {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-600/30 transition-all"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Chạy Xếp Tự Động Ngay</span>
+              <span>Chạy Xếp Tự Động (AI)</span>
             </button>
           )}
 
@@ -198,15 +275,19 @@ export const TimetableMatrix: React.FC = () => {
                   THỜI KHÓA BIỂU: <span className="text-brand-400">LỚP {currentClass.code}</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Khối: <strong>{currentClass.grade}</strong> • Buổi học: <strong>{currentClass.shift === 'MORNING' ? 'Buổi Sáng' : 'Buổi Chiều'}</strong> • Phòng học: <strong>{currentClass.room || 'Chưa xếp'}</strong>
+                  Khối: <strong>Khối {currentClass.grade}</strong> • Buổi học: <strong>{currentClass.shift === 'MORNING' ? 'Buổi Sáng' : 'Buổi Chiều'}</strong> • Phòng học: <strong>{currentClass.room || 'P.Học'}</strong>
                 </p>
               </div>
 
               <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-xs text-amber-400 bg-amber-950/40 px-2.5 py-1 rounded-lg border border-amber-800/60">
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Mẹo: Bấm trực tiếp vào từng ô để chọn môn & gán giáo viên dạy!</span>
+                </div>
                 <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
                   <span className="text-slate-400">Đã xếp: </span>
                   <strong className="text-emerald-400 font-mono font-bold">
-                    {totalScheduledForCurrentClass} / {totalAssignedForCurrentClass} tiết
+                    {totalScheduledForCurrentClass} tiết
                   </strong>
                 </div>
               </div>
@@ -237,7 +318,7 @@ export const TimetableMatrix: React.FC = () => {
                   </tr>
 
                   {morningPeriods.map((period) => (
-                    <tr key={period} className="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors">
+                    <tr key={period} className="border-b border-slate-800/60 hover:bg-slate-800/20 transition-colors">
                       <td className="p-3 font-mono font-bold text-slate-400 text-left pl-4 bg-slate-950/40">
                         Tiết {period}
                       </td>
@@ -250,11 +331,12 @@ export const TimetableMatrix: React.FC = () => {
                         return (
                           <td
                             key={d.key}
-                            className="p-2 border-l border-slate-800/60 min-w-[120px] h-14 align-middle"
+                            onClick={() => handleCellClick(currentClass.id, d.key, period)}
+                            className="p-1.5 border-l border-slate-800/60 min-w-[125px] h-16 align-middle cursor-pointer hover:bg-slate-800/60 transition-all group"
                           >
                             {entry && subject && teacher ? (
                               <div
-                                className="h-full rounded-lg p-1.5 flex flex-col justify-center items-center text-white shadow-sm transition-all hover:scale-[1.02]"
+                                className="h-full rounded-xl p-2 flex flex-col justify-center items-center text-white shadow-sm transition-all group-hover:scale-[1.03] group-hover:shadow-md relative overflow-hidden"
                                 style={{
                                   backgroundColor: `${subject.color}25`,
                                   borderLeft: `4px solid ${subject.color}`,
@@ -263,12 +345,18 @@ export const TimetableMatrix: React.FC = () => {
                                 <span className="font-bold text-xs truncate max-w-full" style={{ color: subject.color }}>
                                   {subject.name}
                                 </span>
-                                <span className="text-[11px] font-mono text-slate-300 truncate max-w-full">
-                                  {teacher.code} ({teacher.name.split(' ').pop()})
+                                <span className="text-[11px] font-mono text-slate-300 truncate max-w-full mt-0.5">
+                                  {teacher.name}
                                 </span>
+                                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Edit3 className="w-3 h-3 text-slate-400" />
+                                </div>
                               </div>
                             ) : (
-                              <span className="text-slate-700 text-xs font-mono">-</span>
+                              <div className="h-full rounded-xl border border-dashed border-slate-800 group-hover:border-brand-500/60 flex items-center justify-center text-slate-700 group-hover:text-brand-400 transition-all font-mono text-[11px] gap-1">
+                                <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100" />
+                                <span>-</span>
+                              </div>
                             )}
                           </td>
                         );
@@ -285,7 +373,7 @@ export const TimetableMatrix: React.FC = () => {
                   </tr>
 
                   {afternoonPeriods.map((period) => (
-                    <tr key={period} className="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors">
+                    <tr key={period} className="border-b border-slate-800/60 hover:bg-slate-800/20 transition-colors">
                       <td className="p-3 font-mono font-bold text-slate-400 text-left pl-4 bg-slate-950/40">
                         Tiết {period}
                       </td>
@@ -298,11 +386,12 @@ export const TimetableMatrix: React.FC = () => {
                         return (
                           <td
                             key={d.key}
-                            className="p-2 border-l border-slate-800/60 min-w-[120px] h-14 align-middle"
+                            onClick={() => handleCellClick(currentClass.id, d.key, period)}
+                            className="p-1.5 border-l border-slate-800/60 min-w-[125px] h-16 align-middle cursor-pointer hover:bg-slate-800/60 transition-all group"
                           >
                             {entry && subject && teacher ? (
                               <div
-                                className="h-full rounded-lg p-1.5 flex flex-col justify-center items-center text-white shadow-sm transition-all hover:scale-[1.02]"
+                                className="h-full rounded-xl p-2 flex flex-col justify-center items-center text-white shadow-sm transition-all group-hover:scale-[1.03] group-hover:shadow-md relative overflow-hidden"
                                 style={{
                                   backgroundColor: `${subject.color}25`,
                                   borderLeft: `4px solid ${subject.color}`,
@@ -311,12 +400,18 @@ export const TimetableMatrix: React.FC = () => {
                                 <span className="font-bold text-xs truncate max-w-full" style={{ color: subject.color }}>
                                   {subject.name}
                                 </span>
-                                <span className="text-[11px] font-mono text-slate-300 truncate max-w-full">
-                                  {teacher.code} ({teacher.name.split(' ').pop()})
+                                <span className="text-[11px] font-mono text-slate-300 truncate max-w-full mt-0.5">
+                                  {teacher.name}
                                 </span>
+                                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Edit3 className="w-3 h-3 text-slate-400" />
+                                </div>
                               </div>
                             ) : (
-                              <span className="text-slate-700 text-xs font-mono">-</span>
+                              <div className="h-full rounded-xl border border-dashed border-slate-800 group-hover:border-brand-500/60 flex items-center justify-center text-slate-700 group-hover:text-brand-400 transition-all font-mono text-[11px] gap-1">
+                                <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100" />
+                                <span>-</span>
+                              </div>
                             )}
                           </td>
                         );
@@ -472,7 +567,7 @@ export const TimetableMatrix: React.FC = () => {
                   MA TRẬN TOÀN TRƯỜNG ({classList.length} Lớp Học)
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Tổng quan thời khóa biểu toàn bộ các lớp trong tuần
+                  Tổng quan thời khóa biểu toàn bộ các lớp tiểu học trong tuần
                 </p>
               </div>
             </div>
@@ -511,12 +606,13 @@ export const TimetableMatrix: React.FC = () => {
                             return (
                               <td
                                 key={`${d.key}_${p}`}
-                                className="p-1 border-l border-slate-800/40 text-[10px] min-w-[42px] h-8"
-                                title={entry && sub ? `${sub.name} (GV ${teachers[entry.teacherId]?.code})` : 'Trống'}
+                                onClick={() => handleCellClick(cls.id, d.key, p)}
+                                className="p-1 border-l border-slate-800/40 text-[10px] min-w-[42px] h-8 cursor-pointer hover:bg-slate-700/50"
+                                title={entry && sub ? `${sub.name} (GV: ${teachers[entry.teacherId]?.name})` : 'Trống - Bấm để xếp'}
                               >
                                 {entry && sub ? (
                                   <div
-                                    className="w-full h-full rounded flex items-center justify-center font-bold text-white"
+                                    className="w-full h-full rounded flex items-center justify-center font-bold text-white shadow-xs"
                                     style={{ backgroundColor: sub.color }}
                                   >
                                     {sub.code}
@@ -537,6 +633,129 @@ export const TimetableMatrix: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* QUICK SLOT EDIT MODAL / POPOVER */}
+      {editingSlot && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-5 space-y-4">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-brand-600/20 border border-brand-500/30 flex items-center justify-center text-brand-400">
+                  <Edit3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">
+                    Xếp Tiết Học Trực Tiếp
+                  </h3>
+                  <p className="text-xs text-brand-300 font-medium">
+                    Lớp {classes[editingSlot.classId]?.code} • {DAYS_OF_WEEK.find(d => d.key === editingSlot.day)?.label} • Tiết {editingSlot.period}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingSlot(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveSlot} className="space-y-4">
+              {/* Select Subject */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                  <span>1. Chọn Môn Học:</span>
+                  {selectedSubjectId && subjects[selectedSubjectId] && (
+                    <span
+                      className="px-2 py-0.2 rounded text-[10px] text-white font-bold"
+                      style={{ backgroundColor: subjects[selectedSubjectId].color }}
+                    >
+                      {subjects[selectedSubjectId].name}
+                    </span>
+                  )}
+                </label>
+                <select
+                  value={selectedSubjectId}
+                  onChange={(e) => setSelectedSubjectId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+                >
+                  {Object.values(subjects).map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Select Teacher with Real-time Conflict Indicators */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">
+                  2. Chọn Giáo Viên Giảng Dạy:
+                </label>
+                <select
+                  value={selectedTeacherIdForSlot}
+                  onChange={(e) => setSelectedTeacherIdForSlot(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+                >
+                  {teacherList.map((t) => {
+                    const status = teacherAvailability[t.id];
+                    const isBusy = status?.isBusy;
+
+                    return (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.code}) {isBusy ? `❌ [BẬN LỚP ${status.busyClassCode}]` : '✅ [TRỐNG TIẾT]'}
+                      </option>
+                    );
+                  })}
+                </select>
+
+                {/* Conflict warning indicator */}
+                {selectedTeacherIdForSlot && teacherAvailability[selectedTeacherIdForSlot]?.isBusy && (
+                  <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-700/80 text-rose-300 text-xs flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>
+                      <strong>Trùng lịch:</strong> {teachers[selectedTeacherIdForSlot]?.name} đang dạy <strong>Lớp {teacherAvailability[selectedTeacherIdForSlot]?.busyClassCode}</strong> tại tiết này!
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Actions */}
+              <div className="pt-2 flex items-center justify-between border-t border-slate-800">
+                {editingSlot.existingEntry ? (
+                  <button
+                    type="button"
+                    onClick={handleDeleteSlot}
+                    className="px-3 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900 text-rose-300 text-xs font-bold border border-rose-800/80 flex items-center gap-1.5 transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Xóa Tiết Này</span>
+                  </button>
+                ) : <div />}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingSlot(null)}
+                    className="px-3.5 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-600/30 flex items-center gap-1.5 transition-all"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Lưu Tiết Học</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

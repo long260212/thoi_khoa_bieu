@@ -50,6 +50,8 @@ interface ScheduleStoreActions {
   // Timetable Operations
   setSchedule: (schedule: Record<string, ScheduleEntry>) => void;
   updateScheduleCell: (classId: string, day: string, period: number, entry: ScheduleEntry | null) => void;
+  assignSlot: (classId: string, day: string, period: number, subjectId: string, teacherId: string) => void;
+  removeSlot: (classId: string, day: string, period: number) => void;
   clearSchedule: () => void;
 
   // Worker Auto-Generation
@@ -212,6 +214,55 @@ export const useScheduleStore = create<ScheduleStore>((set, get) => ({
       } else {
         delete updatedSchedule[key];
       }
+      return { schedule: updatedSchedule };
+    });
+  },
+
+  assignSlot: (classId, day, period, subjectId, teacherId) => {
+    set((state) => {
+      const key = `${classId}_${day}_${period}`;
+      const newEntry: ScheduleEntry = {
+        id: `SCH_${key}`,
+        classId,
+        teacherId,
+        subjectId,
+        day: day as any,
+        period,
+      };
+
+      // Check if assignment exists for this (teacher, class, subject)
+      const existingAssignment = Object.values(state.assignments).find(
+        (a) => a.teacherId === teacherId && a.classId === classId && a.subjectId === subjectId
+      );
+
+      const updatedAssignments = { ...state.assignments };
+      if (!existingAssignment) {
+        // Auto-create assignment record
+        const newAsnId = `ASN_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        updatedAssignments[newAsnId] = {
+          id: newAsnId,
+          teacherId,
+          classId,
+          subjectId,
+          periodsPerWeek: 1,
+        };
+      }
+
+      return {
+        schedule: {
+          ...state.schedule,
+          [key]: newEntry,
+        },
+        assignments: updatedAssignments,
+      };
+    });
+  },
+
+  removeSlot: (classId, day, period) => {
+    set((state) => {
+      const key = `${classId}_${day}_${period}`;
+      const updatedSchedule = { ...state.schedule };
+      delete updatedSchedule[key];
       return { schedule: updatedSchedule };
     });
   },
